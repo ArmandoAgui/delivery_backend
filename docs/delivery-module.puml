@@ -1,0 +1,184 @@
+@startuml delivery_module
+title Delivery Module - Modular Monolith View
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+
+actor "Authenticated\nDELIVERY user" as DeliveryUser
+actor "Admin/System" as Admin
+
+package "delivery" {
+  package "controller" {
+    component "DeliveryController" as DeliveryController
+  }
+
+  package "dto" {
+    component "AssignDeliveryRequest" as AssignDeliveryRequest
+    component "UpdateDeliveryStatusRequest" as UpdateDeliveryStatusRequest
+    component "DeliveryLocationRequest" as DeliveryLocationRequest
+    component "DeliveryAssignmentResponse" as DeliveryAssignmentResponse
+    component "DeliveryOrderResponse" as DeliveryOrderResponse
+    component "DeliveryLocationResponse" as DeliveryLocationResponse
+    component "DeliveryTrackingResponse" as DeliveryTrackingResponse
+    component "NearbyDeliveryResponse" as NearbyDeliveryResponse
+  }
+
+  package "service" {
+    interface "DeliveryService" as DeliveryService
+    component "DeliveryServiceImpl" as DeliveryServiceImpl
+  }
+
+  package "mapper" {
+    component "DeliveryMapper" as DeliveryMapper
+  }
+
+  package "repository" {
+    component "DeliveryAssignmentRepository" as DeliveryAssignmentRepository
+    component "DeliveryLocationRepository" as DeliveryLocationRepository
+    component "DeliveryLocationProjection" as DeliveryLocationProjection
+    component "NearbyDeliveryProjection" as NearbyDeliveryProjection
+  }
+
+  package "entity" {
+    component "DeliveryAssignment" as DeliveryAssignment
+    component "DeliveryLocation" as DeliveryLocation
+    component "DeliveryBatch" as DeliveryBatch
+    component "DeliveryBatchOrder" as DeliveryBatchOrder
+    component "DeliveryStatus" as DeliveryStatus
+    component "BatchStatus" as BatchStatus
+  }
+
+  package "exception" {
+    component "DeliveryException" as DeliveryException
+    component "DeliveryExceptionHandler" as DeliveryExceptionHandler
+    component "DeliveryErrorResponse" as DeliveryErrorResponse
+  }
+}
+
+package "user module\n(simulated dependency)" as UserModule {
+  component "User" as User
+  component "Role" as Role
+  component "Address" as Address
+  component "UserRepository" as UserRepository
+}
+
+package "order module\n(simulated dependency)" as OrderModule {
+  component "Order" as Order
+  component "OrderStatus" as OrderStatus
+  component "OrderRepository" as OrderRepository
+}
+
+package "util" {
+  component "UuidV7Generator" as UuidV7Generator
+}
+
+database "PostgreSQL 15\n+\nPostGIS" as DB
+
+Admin --> DeliveryController : assign / nearby / tracking
+DeliveryUser --> DeliveryController : my-orders / status / location
+
+DeliveryController --> AssignDeliveryRequest
+DeliveryController --> UpdateDeliveryStatusRequest
+DeliveryController --> DeliveryLocationRequest
+DeliveryController --> DeliveryService
+
+DeliveryService <|.. DeliveryServiceImpl
+DeliveryServiceImpl --> DeliveryAssignmentRepository
+DeliveryServiceImpl --> DeliveryLocationRepository
+DeliveryServiceImpl ..> OrderRepository : external module dependency
+DeliveryServiceImpl ..> UserRepository : external module dependency
+DeliveryServiceImpl --> DeliveryMapper
+DeliveryServiceImpl ..> DeliveryException
+
+DeliveryMapper --> DeliveryAssignmentResponse
+DeliveryMapper --> DeliveryOrderResponse
+DeliveryMapper --> DeliveryLocationResponse
+DeliveryMapper --> DeliveryTrackingResponse
+DeliveryMapper --> NearbyDeliveryResponse
+
+DeliveryAssignmentRepository --> DeliveryAssignment
+DeliveryLocationRepository --> DeliveryLocation
+OrderRepository --> Order
+UserRepository --> User
+
+DeliveryAssignment --> DeliveryStatus
+DeliveryAssignment ..> Order : uses existing order
+DeliveryAssignment ..> User : assigned delivery user
+DeliveryLocation ..> User : delivery user
+DeliveryLocation ..> Order : optional tracking target
+DeliveryLocation --> DeliveryBatch
+DeliveryBatchOrder --> DeliveryBatch
+DeliveryBatchOrder ..> Order : existing order
+Order --> OrderStatus
+Order --> Address
+User --> Role
+DeliveryAssignment ..> UuidV7Generator : UUIDv7 id
+DeliveryLocation ..> UuidV7Generator : UUIDv7 id
+DeliveryBatch ..> UuidV7Generator : UUIDv7 id
+Order ..> UuidV7Generator : UUIDv7 id
+User ..> UuidV7Generator : UUIDv7 id
+Address ..> UuidV7Generator : UUIDv7 id
+
+DeliveryAssignmentRepository --> DB
+DeliveryLocationRepository --> DB : native PostGIS queries
+OrderRepository --> DB
+UserRepository --> DB
+
+DeliveryExceptionHandler --> DeliveryErrorResponse
+
+note right of DeliveryController
+REST endpoints:
+POST  /api/deliveries/assign
+GET   /api/deliveries/my-orders
+PATCH /api/deliveries/{id}/status
+POST  /api/deliveries/location
+GET   /api/deliveries/{orderId}/tracking
+GET   /api/deliveries/nearby
+
+API ids are UUIDv7 primary keys.
+end note
+
+note right of DeliveryServiceImpl
+Business rules:
+- One order has only one delivery assignment.
+- Cancelled/delivered orders cannot be assigned.
+- Delivery user must have DELIVERY role and be active.
+- Only assigned delivery user updates status.
+- Finalized deliveries cannot be updated.
+- Invalid status transitions are rejected.
+end note
+
+note bottom of DeliveryStatus
+Allowed transitions:
+ASSIGNED -> ACCEPTED | CANCELLED
+ACCEPTED -> PICKED_UP | CANCELLED
+PICKED_UP -> DELIVERED | CANCELLED
+DELIVERED -> final
+CANCELLED -> final
+end note
+
+note bottom of DB
+Keys:
+UUIDv7 primary keys and UUID foreign keys.
+No BIGSERIAL ids are used after V3.
+
+Tables:
+delivery_assignments
+delivery_batches
+delivery_batch_orders
+delivery_locations
+
+Existing external tables:
+users
+roles
+orders
+addresses
+
+PostGIS:
+ST_MakePoint
+ST_DWithin
+ST_Distance
+end note
+
+@enduml
