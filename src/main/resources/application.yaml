@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   application:
     name: delivery-backend
 
@@ -35,3 +38,7 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+
+app:
+  security:
+    dev-user-id: ${DEV_DELIVERY_USER_ID:018f0000-0000-7000-8000-000000000003}
