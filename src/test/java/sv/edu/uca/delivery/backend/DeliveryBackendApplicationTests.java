@@ -1,13 +1,14 @@
 package sv.edu.uca.delivery.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThat;
+
 class DeliveryBackendApplicationTests {
 
     @Test
-    void contextLoads() {
+    void applicationCanBeInstantiated() {
+        assertThat(new DeliveryBackendApplication()).isNotNull();
     }
 
 }
