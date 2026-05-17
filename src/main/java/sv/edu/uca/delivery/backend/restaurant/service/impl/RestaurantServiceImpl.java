@@ -2,11 +2,13 @@ package sv.edu.uca.delivery.backend.restaurant.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
-import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantResponseDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantUpdateDTO;
+import sv.edu.uca.delivery.backend.restaurant.dto.response.RestaurantResponseDTO;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
+import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantOwnerNotFoundException;
 import sv.edu.uca.delivery.backend.restaurant.mapper.RestaurantMapper;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
 import sv.edu.uca.delivery.backend.restaurant.service.RestaurantService;
@@ -26,13 +28,13 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Override
     public RestaurantResponseDTO create(RestaurantCreateDTO dto) {
 
-        User owner = userRepository.findById(dto.getOwnerId())
-                .orElseThrow();
+        User owner = userRepository.findActiveUserByIdAndRole(dto.getOwnerId(), RoleName.RESTAURANT)
+                .orElseThrow(RestaurantOwnerNotFoundException::new);
 
         Restaurant restaurant = new Restaurant();
 
         restaurant.setOwner(owner);
-        restaurant.setName(dto.getName());
+        applyCreateFields(restaurant, dto);
         restaurant.setOpen(dto.isOpen());
 
         restaurantRepository.save(restaurant);
@@ -52,7 +54,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Override
     public RestaurantResponseDTO findById(UUID id) {
 
-        Restaurant restaurant = restaurantRepository.findById(id)
+        Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
 
         return RestaurantMapper.toDTO(restaurant);
@@ -61,12 +63,11 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Override
     public RestaurantResponseDTO update(UUID id, RestaurantUpdateDTO dto) {
 
-        Restaurant restaurant = restaurantRepository.findById(id)
+        Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
 
-        restaurant.setName(dto.getName());
+        applyUpdateFields(restaurant, dto);
         restaurant.setOpen(dto.isOpen());
-        restaurant.setActive(dto.isActive());
 
         restaurantRepository.save(restaurant);
 
@@ -74,9 +75,9 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     @Override
-    public void delete(UUID id) {
+    public void softDelete(UUID id) {
 
-        Restaurant restaurant = restaurantRepository.findById(id)
+        Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
 
         restaurant.setActive(false);
@@ -91,5 +92,29 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .stream()
                 .map(RestaurantMapper::toDTO)
                 .toList();
+    }
+
+    private void applyCreateFields(Restaurant restaurant, RestaurantCreateDTO dto) {
+        restaurant.setName(dto.getName());
+        restaurant.setDescription(dto.getDescription());
+        restaurant.setPhone(dto.getPhone());
+        restaurant.setEmail(dto.getEmail());
+        restaurant.setStreetAddress(dto.getStreetAddress());
+        restaurant.setCity(dto.getCity());
+        restaurant.setState(dto.getState());
+        restaurant.setCountry(dto.getCountry());
+        restaurant.setLocation(RestaurantMapper.toLocation(dto.getLatitude(), dto.getLongitude()));
+    }
+
+    private void applyUpdateFields(Restaurant restaurant, RestaurantUpdateDTO dto) {
+        restaurant.setName(dto.getName());
+        restaurant.setDescription(dto.getDescription());
+        restaurant.setPhone(dto.getPhone());
+        restaurant.setEmail(dto.getEmail());
+        restaurant.setStreetAddress(dto.getStreetAddress());
+        restaurant.setCity(dto.getCity());
+        restaurant.setState(dto.getState());
+        restaurant.setCountry(dto.getCountry());
+        restaurant.setLocation(RestaurantMapper.toLocation(dto.getLatitude(), dto.getLongitude()));
     }
 }

@@ -2,10 +2,12 @@ package sv.edu.uca.delivery.backend.restaurant.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.*;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
-import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantResponseDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantUpdateDTO;
+import sv.edu.uca.delivery.backend.restaurant.dto.response.RestaurantResponseDTO;
 import sv.edu.uca.delivery.backend.restaurant.service.RestaurantService;
 
 import java.util.List;
@@ -19,6 +21,7 @@ public class RestaurantController {
     private final RestaurantService restaurantService;
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public RestaurantResponseDTO create(
             @RequestBody @Valid RestaurantCreateDTO dto
     ) {
@@ -45,11 +48,12 @@ public class RestaurantController {
         return restaurantService.update(id, dto);
     }
 
-    @DeleteMapping("/{id}")
-    public void delete(
+    @PatchMapping("/{id}/deactivate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void softDelete(
             @PathVariable UUID id
     ) {
-        restaurantService.delete(id);
+        restaurantService.softDelete(id);
     }
 
     @GetMapping("/open")

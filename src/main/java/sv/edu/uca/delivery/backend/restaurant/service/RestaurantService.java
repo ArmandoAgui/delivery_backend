@@ -1,8 +1,8 @@
 package sv.edu.uca.delivery.backend.restaurant.service;
 
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
-import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantResponseDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantUpdateDTO;
+import sv.edu.uca.delivery.backend.restaurant.dto.response.RestaurantResponseDTO;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,7 +17,7 @@ public interface RestaurantService {
 
     RestaurantResponseDTO update(UUID id, RestaurantUpdateDTO dto);
 
-    void delete(UUID id);
+    void softDelete(UUID id);
 
     List<RestaurantResponseDTO> findOpenRestaurants();
 }

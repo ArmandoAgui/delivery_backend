@@ -8,6 +8,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import sv.edu.uca.delivery.backend.delivery.exception.DeliveryException;
+import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
+import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantOwnerNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +23,22 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildResponse(exception.getStatus(), exception.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(RestaurantNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleRestaurantNotFoundException(
+            RestaurantNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(RestaurantOwnerNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleRestaurantOwnerNotFoundException(
+            RestaurantOwnerNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
