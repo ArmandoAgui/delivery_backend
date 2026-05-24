@@ -8,17 +8,23 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
+import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleRequestDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantUpdateDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.response.RestaurantResponseDTO;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
+import sv.edu.uca.delivery.backend.restaurant.entity.RestaurantSchedule;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
+import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantOwnerAlreadyHasRestaurantException;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantOwnerNotFoundException;
+import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantScheduleInvalidException;
 import sv.edu.uca.delivery.backend.restaurant.mapper.RestaurantMapper;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
+import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantScheduleRepository;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +32,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,11 +45,18 @@ class RestaurantServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private RestaurantScheduleRepository restaurantScheduleRepository;
+
     private RestaurantServiceImpl restaurantService;
 
     @BeforeEach
     void setUp() {
-        restaurantService = new RestaurantServiceImpl(restaurantRepository, userRepository);
+        restaurantService = new RestaurantServiceImpl(
+                restaurantRepository,
+                userRepository,
+                restaurantScheduleRepository
+        );
     }
 
     @Test
@@ -62,6 +76,8 @@ class RestaurantServiceImplTest {
             restaurant.setCreatedAt(LocalDateTime.of(2026, 5, 17, 10, 0));
             return restaurant;
         });
+        when(restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(any(), anyShort()))
+                .thenReturn(Optional.of(openSchedule()));
 
         RestaurantResponseDTO response = restaurantService.create(request);
 
@@ -74,13 +90,30 @@ class RestaurantServiceImplTest {
         assertThat(restaurantCaptor.getValue().getCountry()).isEqualTo("El Salvador");
         assertThat(restaurantCaptor.getValue().getLocation().getY()).isEqualTo(13.6929);
         assertThat(restaurantCaptor.getValue().getLocation().getX()).isEqualTo(-89.2182);
-        assertThat(restaurantCaptor.getValue().isOpen()).isTrue();
+        assertThat(restaurantCaptor.getValue().isOpen()).isFalse();
         assertThat(response.getOwnerId()).isEqualTo(owner.getId());
         assertThat(response.getName()).isEqualTo("Pupuseria Central");
         assertThat(response.getLatitude()).isEqualTo(13.6929);
         assertThat(response.getLongitude()).isEqualTo(-89.2182);
         assertThat(response.isOpen()).isTrue();
         assertThat(response.isActive()).isTrue();
+    }
+
+    @Test
+    void createRejectsOwnerThatAlreadyHasRestaurant() {
+        User owner = user();
+        RestaurantCreateDTO request = new RestaurantCreateDTO();
+        request.setOwnerId(owner.getId());
+        request.setName("Pupuseria Central");
+        applyLocationFields(request);
+
+        when(userRepository.findActiveUserByIdAndRole(owner.getId(), RoleName.RESTAURANT))
+                .thenReturn(Optional.of(owner));
+        when(restaurantRepository.existsByOwnerId(owner.getId())).thenReturn(true);
+
+        assertThatThrownBy(() -> restaurantService.create(request))
+                .isInstanceOf(RestaurantOwnerAlreadyHasRestaurantException.class)
+                .hasMessage("Restaurant owner already has a restaurant");
     }
 
     @Test
@@ -103,6 +136,8 @@ class RestaurantServiceImplTest {
     void findAllReturnsOnlyActiveRestaurantsFromRepository() {
         Restaurant restaurant = restaurant("Tacos UCA", true, true);
         when(restaurantRepository.findByActiveTrue()).thenReturn(List.of(restaurant));
+        when(restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(any(), anyShort()))
+                .thenReturn(Optional.of(openSchedule()));
 
         List<RestaurantResponseDTO> response = restaurantService.findAll();
 
@@ -132,6 +167,8 @@ class RestaurantServiceImplTest {
 
         when(restaurantRepository.findByIdAndActiveTrue(restaurantId)).thenReturn(Optional.of(restaurant));
         when(restaurantRepository.save(any(Restaurant.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(any(), anyShort()))
+                .thenReturn(Optional.of(openSchedule()));
 
         RestaurantResponseDTO response = restaurantService.update(restaurantId, request);
 
@@ -157,13 +194,53 @@ class RestaurantServiceImplTest {
     @Test
     void findOpenRestaurantsReturnsOpenAndActiveRestaurantsFromRepository() {
         Restaurant restaurant = restaurant("Cafe Abierto", true, true);
-        when(restaurantRepository.findByOpenTrueAndActiveTrue()).thenReturn(List.of(restaurant));
+        when(restaurantRepository.findByActiveTrue()).thenReturn(List.of(restaurant));
+        when(restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(any(), anyShort()))
+                .thenReturn(Optional.of(openSchedule()));
 
         List<RestaurantResponseDTO> response = restaurantService.findOpenRestaurants();
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().isOpen()).isTrue();
         assertThat(response.getFirst().isActive()).isTrue();
+    }
+
+    @Test
+    void updateSchedulesRejectsOpenDayWithoutHours() {
+        UUID restaurantId = UUID.randomUUID();
+        Restaurant restaurant = restaurant("Cafe Horarios", true, true);
+        RestaurantScheduleRequestDTO request = new RestaurantScheduleRequestDTO();
+        request.setDayOfWeek(1);
+        request.setClosed(false);
+
+        when(restaurantRepository.findByIdAndActiveTrue(restaurantId)).thenReturn(Optional.of(restaurant));
+
+        assertThatThrownBy(() -> restaurantService.updateSchedules(restaurantId, List.of(request)))
+                .isInstanceOf(RestaurantScheduleInvalidException.class)
+                .hasMessage("Open schedule days require opensAt and closesAt");
+    }
+
+    @Test
+    void updateSchedulesSavesWeeklySchedule() {
+        UUID restaurantId = UUID.randomUUID();
+        Restaurant restaurant = restaurant("Cafe Horarios", true, true);
+        RestaurantScheduleRequestDTO request = new RestaurantScheduleRequestDTO();
+        int currentDayOfWeek = LocalDateTime.now().getDayOfWeek().getValue();
+        request.setDayOfWeek(currentDayOfWeek);
+        request.setOpensAt(LocalTime.of(8, 0));
+        request.setClosesAt(LocalTime.of(17, 0));
+        request.setClosed(false);
+
+        when(restaurantRepository.findByIdAndActiveTrue(restaurantId)).thenReturn(Optional.of(restaurant));
+        when(restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(restaurantId, (short) currentDayOfWeek))
+                .thenReturn(Optional.empty());
+        when(restaurantScheduleRepository.findByRestaurantIdOrderByDayOfWeek(restaurantId))
+                .thenReturn(List.of(openSchedule()));
+
+        assertThat(restaurantService.updateSchedules(restaurantId, List.of(request))).hasSize(1);
+
+        verify(restaurantScheduleRepository).save(any(RestaurantSchedule.class));
+        verify(restaurantRepository).save(restaurant);
     }
 
     private User user() {
@@ -193,6 +270,16 @@ class RestaurantServiceImplTest {
         restaurant.setActive(active);
         restaurant.setCreatedAt(LocalDateTime.of(2026, 5, 17, 10, 0));
         return restaurant;
+    }
+
+    private RestaurantSchedule openSchedule() {
+        RestaurantSchedule schedule = new RestaurantSchedule();
+        schedule.setId(1L);
+        schedule.setDayOfWeek((short) LocalDateTime.now().getDayOfWeek().getValue());
+        schedule.setOpensAt(LocalTime.MIN);
+        schedule.setClosesAt(LocalTime.MAX);
+        schedule.setClosed(false);
+        return schedule;
     }
 
     private void applyLocationFields(RestaurantCreateDTO request) {

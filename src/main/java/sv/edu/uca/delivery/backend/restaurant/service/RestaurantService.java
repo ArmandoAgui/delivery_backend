@@ -1,6 +1,8 @@
 package sv.edu.uca.delivery.backend.restaurant.service;
 
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
+import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleDTO;
+import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleRequestDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantUpdateDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.response.RestaurantResponseDTO;
 
@@ -20,4 +22,8 @@ public interface RestaurantService {
     void softDelete(UUID id);
 
     List<RestaurantResponseDTO> findOpenRestaurants();
+
+    List<RestaurantScheduleDTO> findSchedules(UUID restaurantId);
+
+    List<RestaurantScheduleDTO> updateSchedules(UUID restaurantId, List<RestaurantScheduleRequestDTO> schedules);
 }

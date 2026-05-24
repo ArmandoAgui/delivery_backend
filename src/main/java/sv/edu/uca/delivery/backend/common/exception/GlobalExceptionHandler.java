@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import sv.edu.uca.delivery.backend.delivery.exception.DeliveryException;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
+import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantOwnerAlreadyHasRestaurantException;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantOwnerNotFoundException;
+import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantScheduleInvalidException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,6 +41,22 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(RestaurantOwnerAlreadyHasRestaurantException.class)
+    ResponseEntity<ApiErrorResponse> handleRestaurantOwnerAlreadyHasRestaurantException(
+            RestaurantOwnerAlreadyHasRestaurantException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.CONFLICT, exception.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(RestaurantScheduleInvalidException.class)
+    ResponseEntity<ApiErrorResponse> handleRestaurantScheduleInvalidException(
+            RestaurantScheduleInvalidException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

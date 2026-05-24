@@ -4,8 +4,10 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.response.RestaurantResponseDTO;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
+import sv.edu.uca.delivery.backend.restaurant.entity.RestaurantSchedule;
 
 public class RestaurantMapper {
 
@@ -13,6 +15,10 @@ public class RestaurantMapper {
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), SRID);
 
     public static RestaurantResponseDTO toDTO(Restaurant restaurant) {
+        return toDTO(restaurant, restaurant.isOpen());
+    }
+
+    public static RestaurantResponseDTO toDTO(Restaurant restaurant, boolean open) {
         Point location = restaurant.getLocation();
 
         return RestaurantResponseDTO.builder()
@@ -28,7 +34,7 @@ public class RestaurantMapper {
                 .country(restaurant.getCountry())
                 .latitude(location != null ? location.getY() : null)
                 .longitude(location != null ? location.getX() : null)
-                .open(restaurant.isOpen())
+                .open(open)
                 .active(restaurant.isActive())
                 .createdAt(restaurant.getCreatedAt())
                 .build();
@@ -38,5 +44,15 @@ public class RestaurantMapper {
         Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
         point.setSRID(SRID);
         return point;
+    }
+
+    public static RestaurantScheduleDTO toDTO(RestaurantSchedule schedule) {
+        return RestaurantScheduleDTO.builder()
+                .id(schedule.getId())
+                .dayOfWeek(schedule.getDayOfWeek())
+                .opensAt(schedule.getOpensAt())
+                .closesAt(schedule.getClosesAt())
+                .closed(schedule.isClosed())
+                .build();
     }
 }
