@@ -1,4 +1,28 @@
 package sv.edu.uca.delivery.backend.product.service;
 
-public class ProductService {
+import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
+import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
+import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
+import sv.edu.uca.delivery.backend.product.entity.ProductCategory;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface ProductService {
+
+    ProductResponseDTO create(ProductCreateDTO dto);
+
+    List<ProductResponseDTO> findAll();
+
+    ProductResponseDTO findById(UUID id);
+
+    ProductResponseDTO update(UUID id, ProductUpdateDTO dto);
+
+    void softDelete(UUID id);
+
+    List<ProductResponseDTO> findByRestaurant(UUID restaurantId);
+
+    List<ProductResponseDTO> findByCategory(ProductCategory category);
+
+    List<ProductResponseDTO> findAvailable();
 }
