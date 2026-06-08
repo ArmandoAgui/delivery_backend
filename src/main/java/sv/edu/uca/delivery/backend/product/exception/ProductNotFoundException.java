@@ -1,4 +1,4 @@
 package sv.edu.uca.delivery.backend.product.exception;
 
-public class ProductNotFoundException {
+public class ProductNotFoundException extends RuntimeException {
 }

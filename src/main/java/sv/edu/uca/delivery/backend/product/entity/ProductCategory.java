@@ -1,4 +1,11 @@
 package sv.edu.uca.delivery.backend.product.entity;
 
-public class ProductCategory {
+public enum ProductCategory {
+
+    PIZZA,
+    HAMBURGUESA,
+    POLLO,
+    BEBIDA,
+    POSTRE,
+    COMIDA_RAPIDA
 }
