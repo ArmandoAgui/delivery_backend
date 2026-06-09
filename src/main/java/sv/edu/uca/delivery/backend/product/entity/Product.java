@@ -32,15 +32,14 @@ public class Product {
     @Column(nullable = false)
     private BigDecimal price;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ProductCategory category;
+    // me esta generando error
+
+    //@Enumerated(EnumType.STRING)
+    //@Column(nullable = false)
+    //private ProductCategory category;
 
     @Column(name = "is_available", nullable = false)
     private boolean available = true;
-
-    @Column(name = "is_active", nullable = false)
-    private boolean active = true;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

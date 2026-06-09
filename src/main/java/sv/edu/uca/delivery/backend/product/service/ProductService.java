@@ -22,7 +22,7 @@ public interface ProductService {
 
     List<ProductResponseDTO> findByRestaurant(UUID restaurantId);
 
-    List<ProductResponseDTO> findByCategory(ProductCategory category);
+    //List<ProductResponseDTO> findByCategory(ProductCategory category);
 
     List<ProductResponseDTO> findAvailable();
 }

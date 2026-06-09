@@ -24,6 +24,6 @@ public class ProductCreateDTO {
     @NotNull
     private BigDecimal price;
 
-    @NotNull
-    private ProductCategory category;
+    //@NotNull
+    //private ProductCategory category;
 }

@@ -13,9 +13,6 @@ public class ProductMapper {
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
-                .category(product.getCategory())
-                .available(product.isAvailable())
-                .active(product.isActive())
                 .createdAt(product.getCreatedAt())
                 .build();
     }

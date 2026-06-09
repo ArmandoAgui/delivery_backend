@@ -62,13 +62,6 @@ public class ProductController {
         return productService.findByRestaurant(restaurantId);
     }
 
-    @GetMapping("/category/{category}")
-    public List<ProductResponseDTO> findByCategory(
-            @PathVariable ProductCategory category
-    ) {
-        return productService.findByCategory(category);
-    }
-
     @GetMapping("/available")
     public List<ProductResponseDTO> findAvailable() {
         return productService.findAvailable();

@@ -22,11 +22,11 @@ public class ProductResponseDTO {
 
     private BigDecimal price;
 
-    private ProductCategory category;
+    //private ProductCategory category;
 
     private boolean available;
 
-    private boolean active;
+    //private boolean active;
 
     private LocalDateTime createdAt;
 }

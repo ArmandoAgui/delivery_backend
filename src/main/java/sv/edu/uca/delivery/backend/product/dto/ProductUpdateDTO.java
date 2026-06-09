@@ -20,8 +20,8 @@ public class ProductUpdateDTO {
     @NotNull
     private BigDecimal price;
 
-    @NotNull
-    private ProductCategory category;
+    //@NotNull
+    //private ProductCategory category;
 
     private boolean available;
 }
