@@ -3,7 +3,6 @@ package sv.edu.uca.delivery.backend.product.service;
 import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
 import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
 import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
-import sv.edu.uca.delivery.backend.product.entity.ProductCategory;
 
 import java.util.List;
 import java.util.UUID;

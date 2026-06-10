@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import sv.edu.uca.delivery.backend.product.entity.ProductCategory;
+import org.hibernate.validator.constraints.UUID;
 
 import java.math.BigDecimal;
 
@@ -19,6 +19,8 @@ public class ProductUpdateDTO {
 
     @NotNull
     private BigDecimal price;
+
+    private UUID categoryId;
 
     //@NotNull
     //private ProductCategory category;

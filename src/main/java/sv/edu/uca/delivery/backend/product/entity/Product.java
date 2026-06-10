@@ -3,6 +3,7 @@ package sv.edu.uca.delivery.backend.product.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import sv.edu.uca.delivery.backend.category.entity.Category;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
 
@@ -37,6 +38,11 @@ public class Product {
     //@Enumerated(EnumType.STRING)
     //@Column(nullable = false)
     //private ProductCategory category;
+
+    // esto sustituye al ProductCategory, para que funcione el crud
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @Column(name = "is_available", nullable = false)
     private boolean available = true;

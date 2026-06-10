@@ -2,7 +2,6 @@ package sv.edu.uca.delivery.backend.product.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;
-import sv.edu.uca.delivery.backend.product.entity.ProductCategory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,6 +20,10 @@ public class ProductResponseDTO {
     private String description;
 
     private BigDecimal price;
+
+    private UUID categoryId;
+
+    private String categoryName;
 
     //private ProductCategory category;
 

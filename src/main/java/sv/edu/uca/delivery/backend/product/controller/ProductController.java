@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
 import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
 import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
-import sv.edu.uca.delivery.backend.product.entity.ProductCategory;
 import sv.edu.uca.delivery.backend.product.service.ProductService;
 
 import java.util.List;
