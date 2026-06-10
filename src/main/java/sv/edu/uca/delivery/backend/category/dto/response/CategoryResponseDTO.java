@@ -10,7 +10,7 @@ import java.util.UUID;
 @Builder
 public class CategoryResponseDTO {
 
-    private UUID id;
+    private Long id;
 
     private UUID restaurantId;
 

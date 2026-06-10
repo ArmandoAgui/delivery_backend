@@ -16,7 +16,8 @@ import java.util.UUID;
 public class Category {
 
     @Id
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "restaurant_id", nullable = false)
@@ -36,10 +37,6 @@ public class Category {
 
     @PrePersist
     void prePersist() {
-        if (id == null) {
-            id = UuidV7Generator.generate();
-        }
-
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }

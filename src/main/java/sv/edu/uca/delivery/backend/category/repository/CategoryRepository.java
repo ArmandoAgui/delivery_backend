@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface CategoryRepository extends JpaRepository<Category, UUID> {
+public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findByActiveTrue();
 
-    Optional<Category> findByIdAndActiveTrue(UUID id);
+    Optional<Category> findByIdAndActiveTrue(Long id);
 
     List<Category> findByRestaurant_IdAndActiveTrue(UUID restaurantId);
 
