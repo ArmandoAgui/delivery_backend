@@ -1,4 +1,47 @@
 package sv.edu.uca.delivery.backend.category.entity;
 
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
+import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Getter
+@Setter
+@Entity
+@Table(name = "categories")
 public class Category {
+
+    @Id
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "restaurant_id", nullable = false)
+    private Restaurant restaurant;
+
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Column(length = 255)
+    private String description;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    void prePersist() {
+        if (id == null) {
+            id = UuidV7Generator.generate();
+        }
+
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }
