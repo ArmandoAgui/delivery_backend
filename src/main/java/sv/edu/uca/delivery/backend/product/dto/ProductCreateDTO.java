@@ -15,7 +15,8 @@ public class ProductCreateDTO {
     @NotNull
     private UUID restaurantId;
 
-    private UUID categoryId;
+    @NotNull
+    private Long categoryId;
 
     @NotBlank
     private String name;
@@ -25,6 +26,4 @@ public class ProductCreateDTO {
     @NotNull
     private BigDecimal price;
 
-    //@NotNull
-    //private ProductCategory category;
 }

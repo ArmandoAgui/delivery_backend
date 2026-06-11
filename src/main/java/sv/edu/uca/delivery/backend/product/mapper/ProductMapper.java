@@ -10,9 +10,12 @@ public class ProductMapper {
         return ProductResponseDTO.builder()
                 .id(product.getId())
                 .restaurantId(product.getRestaurant().getId())
+                .categoryId(product.getCategory().getId())
+                .categoryName(product.getCategory().getName())
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
+                .available(product.isAvailable())
                 .createdAt(product.getCreatedAt())
                 .build();
     }

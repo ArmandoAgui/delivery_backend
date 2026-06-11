@@ -21,7 +21,7 @@ public class ProductResponseDTO {
 
     private BigDecimal price;
 
-    private UUID categoryId;
+    private Long categoryId;
 
     private String categoryName;
 

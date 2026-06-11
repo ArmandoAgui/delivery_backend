@@ -15,15 +15,13 @@ public class ProductUpdateDTO {
     @NotBlank
     private String name;
 
+    @NotNull
+    private Long categoryId;
+
     private String description;
 
     @NotNull
     private BigDecimal price;
-
-    private UUID categoryId;
-
-    //@NotNull
-    //private ProductCategory category;
 
     private boolean available;
 }

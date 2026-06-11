@@ -14,6 +14,9 @@ import sv.edu.uca.delivery.backend.product.service.ProductService;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
+import sv.edu.uca.delivery.backend.category.entity.Category;
+import sv.edu.uca.delivery.backend.category.exception.CategoryNotFoundException;
+import sv.edu.uca.delivery.backend.category.repository.CategoryRepository;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +28,10 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final RestaurantRepository restaurantRepository;
 
+    private final CategoryRepository categoryRepository;
+
+
+
     @Override
     @Transactional
     public ProductResponseDTO create(ProductCreateDTO dto) {
@@ -35,7 +42,12 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = new Product();
 
+        Category category = categoryRepository
+                .findByIdAndActiveTrue(dto.getCategoryId())
+                        .orElseThrow(CategoryNotFoundException::new);
+
         product.setRestaurant(restaurant);
+        product.setCategory(category);
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
@@ -77,9 +89,15 @@ public class ProductServiceImpl implements ProductService {
                 .findById(id)
                 .orElseThrow(ProductNotFoundException::new);
 
+        Category category = categoryRepository
+                .findByIdAndActiveTrue(dto.getCategoryId())
+                        .orElseThrow(CategoryNotFoundException::new);
+
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
+        product.setCategory(category);
+        product.setAvailable(dto.isAvailable());
 
         productRepository.save(product);
 

@@ -6,6 +6,7 @@ import lombok.Setter;
 import sv.edu.uca.delivery.backend.category.entity.Category;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
+import sv.edu.uca.delivery.backend.category.entity.Category;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,6 +25,14 @@ public class Product {
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
 
+
+    // esto sustituye al ProductCategory, para que funcione el crud Category
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
+
+
     @Column(nullable = false, length = 150)
     private String name;
 
@@ -38,11 +47,6 @@ public class Product {
     //@Enumerated(EnumType.STRING)
     //@Column(nullable = false)
     //private ProductCategory category;
-
-    // esto sustituye al ProductCategory, para que funcione el crud
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
 
     @Column(name = "is_available", nullable = false)
     private boolean available = true;
