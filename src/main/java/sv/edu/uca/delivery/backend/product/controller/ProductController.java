@@ -8,6 +8,8 @@ import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
 import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
 import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
 import sv.edu.uca.delivery.backend.product.service.ProductService;
+import sv.edu.uca.delivery.backend.product.dto.ProductAvailabilityDTO;
+
 
 import java.util.List;
 
@@ -75,6 +77,16 @@ public class ProductController {
     }
 
 
+    @PatchMapping("/{id}/availability")
+    public ProductResponseDTO updateAvailability(
+            @PathVariable UUID id,
+            @RequestBody ProductAvailabilityDTO dto
+    ) {
+        return productService.updateAvailability(
+                id,
+                dto.isAvailable()
+        );
+    }
 
 }
 

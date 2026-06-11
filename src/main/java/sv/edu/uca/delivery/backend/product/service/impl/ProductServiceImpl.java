@@ -84,6 +84,22 @@ public class ProductServiceImpl implements ProductService {
     }
 
 
+    @Override
+    @Transactional
+    public ProductResponseDTO updateAvailability(
+            UUID id,
+            boolean available
+    ){
+        Product product = productRepository
+                .findById(id)
+                .orElseThrow(ProductNotFoundException::new);
+
+        product.setAvailable(available);
+        productRepository.save(product);
+        return ProductMapper.toDTO(product);
+    }
+
+
 
 
     @Override

@@ -27,4 +27,11 @@ public interface ProductService {
     List<ProductResponseDTO> findAvailable();
 
     List<ProductResponseDTO> findByCategory(Long CategoryId);
+
+
+    ProductResponseDTO updateAvailability(
+            UUID id,
+            boolean available
+    );
+
 }
