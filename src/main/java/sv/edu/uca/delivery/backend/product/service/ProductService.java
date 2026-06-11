@@ -5,6 +5,7 @@ import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
 import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
 
 import java.util.List;
+import java.util.ListIterator;
 import java.util.UUID;
 
 public interface ProductService {
@@ -24,4 +25,6 @@ public interface ProductService {
     //List<ProductResponseDTO> findByCategory(ProductCategory category);
 
     List<ProductResponseDTO> findAvailable();
+
+    List<ProductResponseDTO> findByCategory(Long CategoryId);
 }

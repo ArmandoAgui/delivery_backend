@@ -70,6 +70,22 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
     }
 
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> findByCategory(Long categoryId) {
+
+        return productRepository
+                .findByCategoryId(categoryId)
+                .stream()
+                .map(ProductMapper::toDTO)
+                .toList();
+    }
+
+
+
+
     @Override
     @Transactional(readOnly = true)
     public ProductResponseDTO findById(UUID id) {

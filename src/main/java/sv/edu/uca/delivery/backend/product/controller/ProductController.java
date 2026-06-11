@@ -65,4 +65,16 @@ public class ProductController {
     public List<ProductResponseDTO> findAvailable() {
         return productService.findAvailable();
     }
+
+
+    @GetMapping("/category/{categoryId}")
+    public List<ProductResponseDTO> findByCategory(
+            @PathVariable Long categoryId
+    ) {
+        return productService.findByCategory(categoryId);
+    }
+
+
+
 }
+
