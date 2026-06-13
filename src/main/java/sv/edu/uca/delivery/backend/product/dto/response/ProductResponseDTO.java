@@ -25,11 +25,14 @@ public class ProductResponseDTO {
 
     private String categoryName;
 
-    //private ProductCategory category;
-
     private boolean available;
 
-    //private boolean active;
-
     private LocalDateTime createdAt;
+
+    private Integer discountPercentage;
+
+    private BigDecimal discountedPrice;
+
+    private boolean promotionActive;
+
 }

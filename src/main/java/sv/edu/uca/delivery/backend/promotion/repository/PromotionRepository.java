@@ -16,4 +16,5 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     boolean existsByRestaurant_IdAndActiveTrue(UUID restaurantId);
 
     List<Promotion> findByActiveTrue();
-}
+
+    Optional<Promotion> findFirstByRestaurant_IdAndActiveTrue(UUID restaurantId);}

@@ -32,4 +32,5 @@ public class PromotionResponseDTO {
     private LocalDate endDate;
 
     private LocalDateTime createdAt;
+
 }

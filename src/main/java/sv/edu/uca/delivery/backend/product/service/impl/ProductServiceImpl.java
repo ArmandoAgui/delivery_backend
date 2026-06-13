@@ -11,12 +11,16 @@ import sv.edu.uca.delivery.backend.product.exception.ProductNotFoundException;
 import sv.edu.uca.delivery.backend.product.mapper.ProductMapper;
 import sv.edu.uca.delivery.backend.product.repository.ProductRepository;
 import sv.edu.uca.delivery.backend.product.service.ProductService;
+import sv.edu.uca.delivery.backend.promotion.repository.PromotionRepository;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
 import sv.edu.uca.delivery.backend.category.entity.Category;
 import sv.edu.uca.delivery.backend.category.exception.CategoryNotFoundException;
 import sv.edu.uca.delivery.backend.category.repository.CategoryRepository;
+
+import sv.edu.uca.delivery.backend.promotion.entity.Promotion;
+import java.time.LocalDate;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,7 +34,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final CategoryRepository categoryRepository;
 
-
+    private final PromotionRepository promotionRepository;
 
     @Override
     @Transactional
@@ -57,7 +61,7 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.save(product);
 
-        return ProductMapper.toDTO(product);
+        return ProductMapper.toDTO(product, null);
     }
 
     @Override
@@ -66,7 +70,12 @@ public class ProductServiceImpl implements ProductService {
 
         return productRepository.findAll()
                 .stream()
-                .map(ProductMapper::toDTO)
+                .map(product ->
+                        ProductMapper.toDTO(
+                                product,
+                                getActivePromotion(product)
+                        )
+                )
                 .toList();
     }
 
@@ -79,7 +88,12 @@ public class ProductServiceImpl implements ProductService {
         return productRepository
                 .findByCategoryId(categoryId)
                 .stream()
-                .map(ProductMapper::toDTO)
+                .map(product ->
+                        ProductMapper.toDTO(
+                                product,
+                                getActivePromotion(product)
+                        )
+                )
                 .toList();
     }
 
@@ -96,8 +110,27 @@ public class ProductServiceImpl implements ProductService {
 
         product.setAvailable(available);
         productRepository.save(product);
-        return ProductMapper.toDTO(product);
+        return ProductMapper.toDTO(product, null);
     }
+
+
+
+    private Promotion getActivePromotion(Product product) {
+
+        return promotionRepository
+                .findFirstByRestaurant_IdAndActiveTrue(
+                        product.getRestaurant().getId()
+                )
+                .filter(p -> {
+                    LocalDate today = LocalDate.now();
+
+                    return !today.isBefore(p.getStartDate())
+                            && !today.isAfter(p.getEndDate());
+                })
+                .orElse(null);
+    }
+
+
 
 
 
@@ -110,7 +143,10 @@ public class ProductServiceImpl implements ProductService {
                 .findById(id)
                 .orElseThrow(ProductNotFoundException::new);
 
-        return ProductMapper.toDTO(product);
+        return ProductMapper.toDTO(
+                product,
+                getActivePromotion(product)
+        );
     }
 
     @Override
@@ -133,7 +169,7 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.save(product);
 
-        return ProductMapper.toDTO(product);
+        return ProductMapper.toDTO(product, null);
     }
 
     @Override
@@ -157,7 +193,12 @@ public class ProductServiceImpl implements ProductService {
         return productRepository
                 .findByRestaurantId(restaurantId)
                 .stream()
-                .map(ProductMapper::toDTO)
+                .map(product ->
+                        ProductMapper.toDTO(
+                                product,
+                                getActivePromotion(product)
+                        )
+                )
                 .toList();
     }
 
@@ -168,7 +209,26 @@ public class ProductServiceImpl implements ProductService {
         return productRepository
                 .findByAvailableTrue()
                 .stream()
-                .map(ProductMapper::toDTO)
+                .map(product -> {
+
+                    Promotion promotion =
+                            promotionRepository
+                                    .findFirstByRestaurant_IdAndActiveTrue(
+                                            product.getRestaurant().getId()
+                                    )
+                                    .filter(p -> {
+                                        LocalDate today = LocalDate.now();
+
+                                        return !today.isBefore(p.getStartDate())
+                                                && !today.isAfter(p.getEndDate());
+                                    })
+                                    .orElse(null);
+
+                    return ProductMapper.toDTO(
+                            product,
+                            promotion
+                    );
+                })
                 .toList();
     }
 }

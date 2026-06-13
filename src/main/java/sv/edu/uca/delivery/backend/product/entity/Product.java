@@ -42,12 +42,6 @@ public class Product {
     @Column(nullable = false)
     private BigDecimal price;
 
-    // me esta generando error
-
-    //@Enumerated(EnumType.STRING)
-    //@Column(nullable = false)
-    //private ProductCategory category;
-
     @Column(name = "is_available", nullable = false)
     private boolean available = true;
 
