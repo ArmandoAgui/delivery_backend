@@ -15,6 +15,7 @@ import sv.edu.uca.delivery.backend.coupon.entity.Coupon;
 import sv.edu.uca.delivery.backend.coupon.entity.CouponRedemption;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRedemptionRepository;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRepository;
+import sv.edu.uca.delivery.backend.delivery.repository.DeliveryAssignmentRepository;
 import sv.edu.uca.delivery.backend.loyalty.service.LoyaltyService;
 import sv.edu.uca.delivery.backend.order.dto.request.CreateOrderFromCartRequest;
 import sv.edu.uca.delivery.backend.order.dto.response.OrderItemResponse;
@@ -55,6 +56,7 @@ public class OrderService {
     private final CouponRepository couponRepository;
     private final CouponRedemptionRepository couponRedemptionRepository;
     private final PaymentRepository paymentRepository;
+    private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final AuthenticatedUserProvider authenticatedUserProvider;
     private final OrderFactory orderFactory;
     private final LoyaltyService loyaltyService;
@@ -154,6 +156,7 @@ public class OrderService {
     public OrderResponse cancel(UUID id) {
         Order order = orderRepository.findWithLockingById(id)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
+        requireCustomerOwnerOrAdmin(order);
         if (order.getStatus() != OrderStatus.CREATED) {
             throw new BusinessException(HttpStatus.CONFLICT, "Only created orders can be cancelled");
         }
@@ -168,6 +171,7 @@ public class OrderService {
     public OrderResponse confirm(UUID id) {
         Order order = orderRepository.findWithLockingById(id)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
+        requireRestaurantOwnerOrAdmin(order);
         if (order.getStatus() != OrderStatus.CREATED) {
             throw new BusinessException(HttpStatus.CONFLICT, "Only created orders can be confirmed");
         }
@@ -182,6 +186,7 @@ public class OrderService {
     public OrderResponse reject(UUID id) {
         Order order = orderRepository.findWithLockingById(id)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
+        requireRestaurantOwnerOrAdmin(order);
         if (order.getStatus() != OrderStatus.CREATED) {
             throw new BusinessException(HttpStatus.CONFLICT, "Only created orders can be rejected");
         }
@@ -270,9 +275,38 @@ public class OrderService {
             return;
         }
         User current = currentUser();
-        if (current.getRole().getName() != RoleName.ADMIN && current.getRole().getName() != RoleName.DELIVERY) {
-            throw new BusinessException(HttpStatus.FORBIDDEN, "Order is not visible for current user");
+        if (current.getRole().getName() == RoleName.ADMIN) {
+            return;
         }
+        if (current.getRole().getName() == RoleName.DELIVERY
+                && deliveryAssignmentRepository.findByOrderId(order.getId())
+                .filter(assignment -> assignment.getDeliveryUser().getId().equals(currentUserId))
+                .isPresent()) {
+            return;
+        }
+        throw new BusinessException(HttpStatus.FORBIDDEN, "Order is not visible for current user");
+    }
+
+    private void requireCustomerOwnerOrAdmin(Order order) {
+        UUID currentUserId = authenticatedUserProvider.getCurrentUserId();
+        if (order.getCustomer().getId().equals(currentUserId)) {
+            return;
+        }
+        if (currentUser().getRole().getName() == RoleName.ADMIN) {
+            return;
+        }
+        throw new BusinessException(HttpStatus.FORBIDDEN, "Only the order owner or admin can cancel this order");
+    }
+
+    private void requireRestaurantOwnerOrAdmin(Order order) {
+        UUID currentUserId = authenticatedUserProvider.getCurrentUserId();
+        if (order.getRestaurant().getOwner().getId().equals(currentUserId)) {
+            return;
+        }
+        if (currentUser().getRole().getName() == RoleName.ADMIN) {
+            return;
+        }
+        throw new BusinessException(HttpStatus.FORBIDDEN, "Only the restaurant owner or admin can update this order");
     }
 
     private OrderResponse toResponse(Order order) {

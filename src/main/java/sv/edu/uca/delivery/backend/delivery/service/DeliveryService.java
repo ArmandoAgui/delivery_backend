@@ -1,9 +1,11 @@
 package sv.edu.uca.delivery.backend.delivery.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
+import sv.edu.uca.delivery.backend.common.exception.BusinessException;
 import sv.edu.uca.delivery.backend.delivery.dto.AssignDeliveryRequest;
 import sv.edu.uca.delivery.backend.delivery.dto.DeliveryResponse;
 import sv.edu.uca.delivery.backend.delivery.dto.UpdateDeliveryStatusRequest;
@@ -76,6 +78,8 @@ public class DeliveryService {
 
     @Transactional
     public DeliveryResponse assignDelivery(AssignDeliveryRequest request) {
+        validateCurrentUserCanAssignDelivery();
+
         Order order = orderRepository.findWithLockingById(request.orderId())
                 .orElseThrow(() -> new DeliveryNotFoundException("Order was not found"));
 
@@ -137,11 +141,20 @@ public class DeliveryService {
         if (order.getStatus() == OrderStatus.DELIVERED) {
             throw new DeliveryBusinessException("Delivered orders cannot be assigned");
         }
+        if (order.getStatus() != OrderStatus.CONFIRMED && order.getStatus() != OrderStatus.READY_FOR_PICKUP) {
+            throw new DeliveryBusinessException("Only confirmed or ready orders can be assigned");
+        }
     }
 
     private void validateDeliveryUser(UUID deliveryUserId) {
         userRepository.findActiveUserByIdAndRole(deliveryUserId, RoleName.DELIVERY)
                 .orElseThrow(() -> new DeliveryBusinessException("Delivery user must exist, be active, and have DELIVERY role"));
+    }
+
+    private void validateCurrentUserCanAssignDelivery() {
+        UUID currentUserId = authenticatedUserProvider.getCurrentUserId();
+        userRepository.findByIdAndActiveTrueAndRoleName(currentUserId, RoleName.ADMIN)
+                .orElseThrow(() -> new BusinessException(HttpStatus.FORBIDDEN, "Only admins can assign delivery"));
     }
 
     private void validateStatusChange(DeliveryAssignment assignment, DeliveryStatus requestedStatus) {

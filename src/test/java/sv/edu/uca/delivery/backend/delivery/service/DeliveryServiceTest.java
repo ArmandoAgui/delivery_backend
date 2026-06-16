@@ -64,9 +64,13 @@ class DeliveryServiceTest {
     @Test
     void assignDeliveryCreatesAssignmentWithNearestAvailableDeliveryUser() {
         UUID orderId = UUID.randomUUID();
+        User admin = adminUser();
         User deliveryUser = deliveryUser();
         Order order = order(OrderStatus.READY_FOR_PICKUP);
 
+        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(admin.getId());
+        when(userRepository.findByIdAndActiveTrueAndRoleName(admin.getId(), RoleName.ADMIN))
+                .thenReturn(Optional.of(admin));
         when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order));
         when(deliveryAssignmentRepository.existsByOrderId(order.getId())).thenReturn(false);
         when(deliveryAssignmentRepository.findNearestAvailableDeliveryUser(order.getId()))
@@ -91,6 +95,11 @@ class DeliveryServiceTest {
     @Test
     void assignDeliveryRejectsCancelledOrder() {
         UUID orderId = UUID.randomUUID();
+        User admin = adminUser();
+
+        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(admin.getId());
+        when(userRepository.findByIdAndActiveTrueAndRoleName(admin.getId(), RoleName.ADMIN))
+                .thenReturn(Optional.of(admin));
         when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order(OrderStatus.CANCELLED)));
 
         assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
@@ -103,8 +112,12 @@ class DeliveryServiceTest {
     @Test
     void assignDeliveryRejectsOrderThatAlreadyHasAssignment() {
         UUID orderId = UUID.randomUUID();
+        User admin = adminUser();
         Order order = order(OrderStatus.READY_FOR_PICKUP);
 
+        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(admin.getId());
+        when(userRepository.findByIdAndActiveTrueAndRoleName(admin.getId(), RoleName.ADMIN))
+                .thenReturn(Optional.of(admin));
         when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order));
         when(deliveryAssignmentRepository.existsByOrderId(order.getId())).thenReturn(true);
 
@@ -112,6 +125,23 @@ class DeliveryServiceTest {
                 .isInstanceOf(DeliveryBusinessException.class)
                 .hasMessage("Order already has a delivery assignment");
 
+        verify(deliveryAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignDeliveryRejectsNonAdminCaller() {
+        UUID orderId = UUID.randomUUID();
+        User deliveryUser = deliveryUser();
+
+        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(deliveryUser.getId());
+        when(userRepository.findByIdAndActiveTrueAndRoleName(deliveryUser.getId(), RoleName.ADMIN))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
+                .isInstanceOf(sv.edu.uca.delivery.backend.common.exception.BusinessException.class)
+                .hasMessage("Only admins can assign delivery");
+
+        verify(orderRepository, never()).findWithLockingById(any());
         verify(deliveryAssignmentRepository, never()).save(any());
     }
 
@@ -179,6 +209,16 @@ class DeliveryServiceTest {
         user.setFirstName("Ada");
         user.setLastName("Lovelace");
         user.setEmail("ada@example.com");
+        user.setActive(true);
+        return user;
+    }
+
+    private User adminUser() {
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setFirstName("Grace");
+        user.setLastName("Admin");
+        user.setEmail("grace@example.com");
         user.setActive(true);
         return user;
     }
