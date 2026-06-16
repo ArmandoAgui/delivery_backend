@@ -61,6 +61,7 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
+    urls-primary-name: 00 Todos los endpoints
     display-request-duration: true
     doc-expansion: none
     filter: true

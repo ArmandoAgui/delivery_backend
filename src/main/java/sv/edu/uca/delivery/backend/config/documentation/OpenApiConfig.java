@@ -8,7 +8,6 @@ import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.oas.models.tags.Tag;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,28 +53,24 @@ public class OpenApiConfig {
                         .addSecuritySchemes(BEARER_AUTH, new SecurityScheme()
                                 .name(BEARER_AUTH)
                                 .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                                .description("JWT access token returned by /api/auth/login")))
-                .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH))
-                .tags(List.of(
-                        new Tag().name("Auth").description("Registro, login, refresh token, logout y perfil autenticado."),
-                        new Tag().name("Users").description("CRUD administrativo de usuarios y perfil autenticado."),
-                        new Tag().name("Addresses").description("Direcciones del cliente autenticado."),
-                        new Tag().name("Restaurants").description("Restaurantes, horarios, estado y busquedas publicas."),
-                        new Tag().name("Categories").description("Categorias de menu por restaurante."),
-                        new Tag().name("Products").description("Productos/menu, precios, disponibilidad y categorias."),
-                        new Tag().name("Promotions").description("Promociones del catalogo por restaurante."),
-                        new Tag().name("Cart").description("Carrito activo del cliente y calculo de subtotal."),
-                        new Tag().name("Orders").description("Pedidos desde carrito, estados, historial y tracking REST."),
-                        new Tag().name("Deliveries").description("Asignacion de repartidor y cambio de estados de entrega."),
-                        new Tag().name("Complaints").description("Reclamos, resolucion administrativa y reembolsos simples."),
-                        new Tag().name("Coupons").description("Cupones, vigencia, limites y activacion administrativa."),
-                        new Tag().name("Loyalty").description("Puntos de fidelidad, acumulacion y canje basico."),
-                        new Tag().name("Reviews").description("Calificaciones de pedidos entregados."),
-                        new Tag().name("Reports").description("Reportes administrativos y estadisticas basicas."),
-                        new Tag().name("Admin").description("Configuracion administrativa, como comisiones.")
-                ));
+                        .scheme("bearer")
+                        .bearerFormat("JWT")
+                        .description("JWT access token returned by /api/auth/login")))
+                .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
+    }
+
+    @Bean
+    public GroupedOpenApi allApi() {
+        return GroupedOpenApi.builder()
+                .group("00 Todos los endpoints")
+                .pathsToMatch(
+                        "/api/**",
+                        "/restaurants/**",
+                        "/categories/**",
+                        "/products/**",
+                        "/promotions/**"
+                )
+                .build();
     }
 
     @Bean
