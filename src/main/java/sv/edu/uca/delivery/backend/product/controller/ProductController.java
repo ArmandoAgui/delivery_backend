@@ -2,8 +2,11 @@ package sv.edu.uca.delivery.backend.product.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import java.util.UUID;import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
+import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
 import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
 import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
@@ -31,6 +34,11 @@ public class ProductController {
     @GetMapping
     public List<ProductResponseDTO> findAll() {
         return productService.findAll();
+    }
+
+    @GetMapping("/page")
+    public PageResponse<ProductResponseDTO> findAllPaged(Pageable pageable) {
+        return PaginationUtils.toPage(productService.findAll(), pageable);
     }
 
     @GetMapping("/{id}")
@@ -63,9 +71,22 @@ public class ProductController {
         return productService.findByRestaurant(restaurantId);
     }
 
+    @GetMapping("/restaurant/{restaurantId}/page")
+    public PageResponse<ProductResponseDTO> findByRestaurantPaged(
+            @PathVariable UUID restaurantId,
+            Pageable pageable
+    ) {
+        return PaginationUtils.toPage(productService.findByRestaurant(restaurantId), pageable);
+    }
+
     @GetMapping("/available")
     public List<ProductResponseDTO> findAvailable() {
         return productService.findAvailable();
+    }
+
+    @GetMapping("/available/page")
+    public PageResponse<ProductResponseDTO> findAvailablePaged(Pageable pageable) {
+        return PaginationUtils.toPage(productService.findAvailable(), pageable);
     }
 
 
@@ -74,6 +95,14 @@ public class ProductController {
             @PathVariable Long categoryId
     ) {
         return productService.findByCategory(categoryId);
+    }
+
+    @GetMapping("/category/{categoryId}/page")
+    public PageResponse<ProductResponseDTO> findByCategoryPaged(
+            @PathVariable Long categoryId,
+            Pageable pageable
+    ) {
+        return PaginationUtils.toPage(productService.findByCategory(categoryId), pageable);
     }
 
 

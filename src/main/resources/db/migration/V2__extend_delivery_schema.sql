@@ -136,14 +136,14 @@ CREATE TABLE delivery_batch_orders (
     CONSTRAINT chk_delivery_batch_orders_sequence_number_positive CHECK (sequence_number > 0)
 );
 
--- Stores delivery driver location samples for real-time tracking.
--- GEOGRAPHY(Point, 4326) keeps distance calculations consistent with restaurants and addresses.
+-- Stores delivery driver location samples.
 CREATE TABLE delivery_locations (
     id BIGSERIAL,
     delivery_user_id BIGINT NOT NULL,
     order_id BIGINT,
     delivery_batch_id BIGINT,
-    location GEOGRAPHY(Point, 4326) NOT NULL,
+    latitude NUMERIC(9, 6) NOT NULL,
+    longitude NUMERIC(9, 6) NOT NULL,
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
@@ -151,7 +151,9 @@ CREATE TABLE delivery_locations (
     CONSTRAINT fk_delivery_locations_delivery_user_id_users FOREIGN KEY (delivery_user_id) REFERENCES users (id),
     CONSTRAINT fk_delivery_locations_order_id_orders FOREIGN KEY (order_id) REFERENCES orders (id),
     CONSTRAINT fk_delivery_locations_delivery_batch_id_delivery_batches FOREIGN KEY (delivery_batch_id) REFERENCES delivery_batches (id),
-    CONSTRAINT chk_delivery_locations_tracking_target CHECK (order_id IS NOT NULL OR delivery_batch_id IS NOT NULL)
+    CONSTRAINT chk_delivery_locations_tracking_target CHECK (order_id IS NOT NULL OR delivery_batch_id IS NOT NULL),
+    CONSTRAINT chk_delivery_locations_latitude_range CHECK (latitude BETWEEN -90 AND 90),
+    CONSTRAINT chk_delivery_locations_longitude_range CHECK (longitude BETWEEN -180 AND 180)
 );
 
 -- ============================================================================
@@ -273,7 +275,7 @@ CREATE TABLE restaurant_commissions (
 -- Indexes
 -- ============================================================================
 
-CREATE INDEX idx_delivery_locations_location_gist ON delivery_locations USING GIST (location);
+CREATE INDEX idx_delivery_locations_latitude_longitude ON delivery_locations (latitude, longitude);
 
 CREATE INDEX idx_restaurant_schedules_restaurant_id_day ON restaurant_schedules (restaurant_id, day_of_week);
 

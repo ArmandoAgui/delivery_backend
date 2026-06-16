@@ -11,8 +11,7 @@ import sv.edu.uca.delivery.backend.restaurant.entity.RestaurantSchedule;
 
 public class RestaurantMapper {
 
-    private static final int SRID = 4326;
-    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), SRID);
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     public static RestaurantResponseDTO toDTO(Restaurant restaurant) {
         return toDTO(restaurant, restaurant.isOpen());
@@ -20,7 +19,6 @@ public class RestaurantMapper {
 
     public static RestaurantResponseDTO toDTO(Restaurant restaurant, boolean open) {
         Point location = restaurant.getLocation();
-
         return RestaurantResponseDTO.builder()
                 .id(restaurant.getId())
                 .ownerId(restaurant.getOwner().getId())
@@ -32,18 +30,12 @@ public class RestaurantMapper {
                 .city(restaurant.getCity())
                 .state(restaurant.getState())
                 .country(restaurant.getCountry())
-                .latitude(location != null ? location.getY() : null)
-                .longitude(location != null ? location.getX() : null)
+                .latitude(location == null ? null : location.getY())
+                .longitude(location == null ? null : location.getX())
                 .open(open)
                 .active(restaurant.isActive())
                 .createdAt(restaurant.getCreatedAt())
                 .build();
-    }
-
-    public static Point toLocation(double latitude, double longitude) {
-        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
-        point.setSRID(SRID);
-        return point;
     }
 
     public static RestaurantScheduleDTO toDTO(RestaurantSchedule schedule) {
@@ -54,5 +46,11 @@ public class RestaurantMapper {
                 .closesAt(schedule.getClosesAt())
                 .closed(schedule.isClosed())
                 .build();
+    }
+
+    public static Point toLocation(double latitude, double longitude) {
+        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+        point.setSRID(4326);
+        return point;
     }
 }

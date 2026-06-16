@@ -2,8 +2,11 @@ package sv.edu.uca.delivery.backend.promotion.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
+import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 import sv.edu.uca.delivery.backend.promotion.dto.PromotionCreateDTO;
 import sv.edu.uca.delivery.backend.promotion.dto.PromotionStatusDTO;
 import sv.edu.uca.delivery.backend.promotion.dto.PromotionUpdateDTO;
@@ -31,6 +34,11 @@ public class PromotionController {
     @GetMapping
     public List<PromotionResponseDTO> findAll() {
         return promotionService.findAll();
+    }
+
+    @GetMapping("/page")
+    public PageResponse<PromotionResponseDTO> findAllPaged(Pageable pageable) {
+        return PaginationUtils.toPage(promotionService.findAll(), pageable);
     }
 
     @GetMapping("/{id}")
@@ -63,9 +71,22 @@ public class PromotionController {
         return promotionService.findByRestaurant(restaurantId);
     }
 
+    @GetMapping("/restaurant/{restaurantId}/page")
+    public PageResponse<PromotionResponseDTO> findByRestaurantPaged(
+            @PathVariable UUID restaurantId,
+            Pageable pageable
+    ) {
+        return PaginationUtils.toPage(promotionService.findByRestaurant(restaurantId), pageable);
+    }
+
     @GetMapping("/active")
     public List<PromotionResponseDTO> findActivePromotions() {
         return promotionService.findActivePromotions();
+    }
+
+    @GetMapping("/active/page")
+    public PageResponse<PromotionResponseDTO> findActivePromotionsPaged(Pageable pageable) {
+        return PaginationUtils.toPage(promotionService.findActivePromotions(), pageable);
     }
 
     @PatchMapping("/{id}/status")

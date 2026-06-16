@@ -2,9 +2,12 @@ package sv.edu.uca.delivery.backend.restaurant.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.*;
+import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
+import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleRequestDTO;
@@ -35,6 +38,11 @@ public class RestaurantController {
         return restaurantService.findAll();
     }
 
+    @GetMapping("/page")
+    public PageResponse<RestaurantResponseDTO> findAllPaged(Pageable pageable) {
+        return PaginationUtils.toPage(restaurantService.findAll(), pageable);
+    }
+
     @GetMapping("/{id}")
     public RestaurantResponseDTO findById(
             @PathVariable UUID id
@@ -61,6 +69,11 @@ public class RestaurantController {
     @GetMapping("/open")
     public List<RestaurantResponseDTO> findOpenRestaurants() {
         return restaurantService.findOpenRestaurants();
+    }
+
+    @GetMapping("/open/page")
+    public PageResponse<RestaurantResponseDTO> findOpenRestaurantsPaged(Pageable pageable) {
+        return PaginationUtils.toPage(restaurantService.findOpenRestaurants(), pageable);
     }
 
     @GetMapping("/{id}/schedules")

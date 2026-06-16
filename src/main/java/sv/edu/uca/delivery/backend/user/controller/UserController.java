@@ -2,11 +2,15 @@ package sv.edu.uca.delivery.backend.user.controller;
 
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.*;
+import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
+import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.dto.request.RegisterRequest;
+import sv.edu.uca.delivery.backend.user.dto.request.UpdateUserRequest;
 import sv.edu.uca.delivery.backend.user.dto.response.UserResponse;
 import sv.edu.uca.delivery.backend.user.service.UserService;
 
@@ -26,13 +30,18 @@ public class UserController {
         return userService.findAll();
     }
 
+    @GetMapping("/page")
+    public PageResponse<UserResponse> findAllPaged(Pageable pageable) {
+        return PaginationUtils.toPage(userService.findAll(), pageable);
+    }
+
     @GetMapping("/me")
     public UserResponse me() {
         return userService.findById(authenticatedUserProvider.getCurrentUserId());
     }
 
     @PutMapping("/me")
-    public UserResponse updateMe(@RequestBody @Valid RegisterRequest request) {
+    public UserResponse updateMe(@RequestBody @Valid UpdateUserRequest request) {
         return userService.update(authenticatedUserProvider.getCurrentUserId(), request);
     }
 
@@ -50,7 +59,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public UserResponse update(@PathVariable UUID id, @RequestBody @Valid RegisterRequest request) {
+    public UserResponse update(@PathVariable UUID id, @RequestBody @Valid UpdateUserRequest request) {
         return userService.update(id, request);
     }
 

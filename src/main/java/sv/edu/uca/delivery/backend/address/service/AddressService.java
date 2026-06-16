@@ -78,7 +78,7 @@ public class AddressService {
         address.setCountry(request.country());
         address.setPostalCode(request.postalCode());
         address.setDefaultAddress(request.defaultAddress());
-        address.setLocation(point(request.latitude(), request.longitude()));
+        address.setLocation(toLocation(request.latitude(), request.longitude()));
     }
 
     private void clearDefaults(UUID userId) {
@@ -87,12 +87,6 @@ public class AddressService {
                     address.setDefaultAddress(false);
                     addressRepository.save(address);
                 });
-    }
-
-    private Point point(double latitude, double longitude) {
-        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
-        point.setSRID(4326);
-        return point;
     }
 
     private AddressResponse toResponse(Address address) {
@@ -109,6 +103,12 @@ public class AddressService {
                 location == null ? null : location.getX(),
                 address.isDefaultAddress()
         );
+    }
+
+    private Point toLocation(double latitude, double longitude) {
+        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+        point.setSRID(4326);
+        return point;
     }
 
     private UUID currentUserId() {

@@ -47,6 +47,9 @@ Trabajo realizado sobre la rama actual, sin cambiar de rama. La integración tom
 - `config/database/DevSeedRunner`: seed idempotente para perfil/flag dev.
 - `common/exception/BusinessException`.
 - Migración `V6__auth_indexes_and_backend_completion_support.sql`.
+- Migración `V7__use_plain_coordinates_without_postgis.sql` quedó como migración histórica intermedia ya aplicada en local.
+- Migración `V8__create_promotions_table.sql`.
+- Migración `V9__restore_postgis_geography_locations.sql` restaura `GEOGRAPHY(Point, 4326)` e índices GiST para ubicaciones.
 
 ## 4. Código reemplazado o reforzado
 
@@ -56,6 +59,9 @@ Trabajo realizado sobre la rama actual, sin cambiar de rama. La integración tom
 - Servicios de restaurante/producto/categoría/promoción refuerzan permisos por dueño/admin.
 - Delivery response ahora incluye dirección en texto plano, restaurante, resumen de items y estado del pedido.
 - Pedido ahora persiste subtotal, descuento, impuestos, envío, propina, total, cupón, items e historial.
+- El modelo de ubicación vuelve a usar PostGIS con `GEOGRAPHY(Point, 4326)` para direcciones, restaurantes y ubicaciones de repartidores.
+- `PUT /api/users/me` y `PUT /api/users/{id}` usan `UpdateUserRequest`; el password es opcional.
+- Los listados grandes conservan su endpoint original y agregan endpoints `/page` con `PageResponse` estable.
 
 ## 5. Endpoints disponibles
 
@@ -74,6 +80,7 @@ Trabajo realizado sobre la rama actual, sin cambiar de rama. La integración tom
 | Método | Endpoint | Resultado esperado |
 | --- | --- | --- |
 | GET | `/api/users` | `200`, admin lista usuarios |
+| GET | `/api/users/page?page=0&size=10` | `200`, admin lista usuarios paginados |
 | POST | `/api/users` | `201`, admin crea usuario |
 | GET | `/api/users/{id}` | `200` o `404` |
 | PUT | `/api/users/{id}` | `200`, admin actualiza usuario |
@@ -90,13 +97,24 @@ Trabajo realizado sobre la rama actual, sin cambiar de rama. La integración tom
 | Método | Endpoint | Resultado esperado |
 | --- | --- | --- |
 | GET/POST | `/restaurants`, `/api/restaurants` | Público GET; escritura admin/restaurante |
+| GET | `/api/restaurants/page?page=0&size=10` | Público, restaurantes paginados |
+| GET | `/api/restaurants/open/page?page=0&size=10` | Público, restaurantes abiertos paginados |
 | GET/PUT/PATCH | `/api/restaurants/{id}` | Consulta/actualización/desactivación |
 | GET/PUT | `/api/restaurants/{id}/schedules` | Horarios |
 | GET/POST | `/products`, `/api/products` | Público GET; escritura admin/restaurante |
+| GET | `/api/products/page?page=0&size=10` | Público, productos paginados |
+| GET | `/api/products/available/page?page=0&size=10` | Público, productos disponibles paginados |
+| GET | `/api/products/restaurant/{restaurantId}/page?page=0&size=10` | Público, productos por restaurante paginados |
+| GET | `/api/products/category/{categoryId}/page?page=0&size=10` | Público, productos por categoría paginados |
 | GET/PUT/PATCH | `/api/products/{id}` | Consulta/actualización/disponibilidad/desactivación |
 | GET/POST | `/categories`, `/api/categories` | Público GET; escritura admin/restaurante |
+| GET | `/api/categories/page?page=0&size=10` | Público, categorías paginadas |
+| GET | `/api/categories/restaurant/{restaurantId}/page?page=0&size=10` | Público, categorías por restaurante paginadas |
 | GET/PUT/PATCH | `/api/categories/{id}` | Consulta/actualización/desactivación |
 | GET/POST | `/promotions`, `/api/promotions` | Público GET; escritura admin/restaurante |
+| GET | `/api/promotions/page?page=0&size=10` | Público, promociones paginadas |
+| GET | `/api/promotions/active/page?page=0&size=10` | Público, promociones activas paginadas |
+| GET | `/api/promotions/restaurant/{restaurantId}/page?page=0&size=10` | Público, promociones por restaurante paginadas |
 | GET/PUT/PATCH | `/api/promotions/{id}` | Consulta/actualización/estado/desactivación |
 
 ### Carrito y pedidos
@@ -111,7 +129,9 @@ Trabajo realizado sobre la rama actual, sin cambiar de rama. La integración tom
 | POST | `/api/orders` | `201`, crea pedido desde carrito |
 | GET | `/api/orders/{id}` | `200`, detalle |
 | GET | `/api/orders/my-history` | `200`, historial cliente |
+| GET | `/api/orders/my-history/page?page=0&size=10` | `200`, historial cliente paginado |
 | GET | `/api/orders/restaurant` | `200`, pedidos del restaurante propio |
+| GET | `/api/orders/restaurant/page?page=0&size=10` | `200`, pedidos del restaurante propio paginados |
 | PATCH | `/api/orders/{id}/cancel` | `200`, cancela antes de confirmar |
 | PATCH | `/api/orders/{id}/confirm` | `200`, restaurante confirma |
 | PATCH | `/api/orders/{id}/reject` | `200`, restaurante rechaza |
@@ -158,6 +178,8 @@ Trabajo realizado sobre la rama actual, sin cambiar de rama. La integración tom
 - Al entregar pedido se acumulan puntos de fidelidad.
 - Calificaciones requieren pedido entregado y evitan duplicado.
 - Seed dev es idempotente y actualiza credenciales conocidas.
+- PostgreSQL local requiere PostGIS. La asignación de repartidor usa `ST_Distance` entre la última ubicación del repartidor y el restaurante.
+- No se implementan rutas GPS ni navegación; PostGIS se usa para almacenamiento geográfico y cálculo de cercanía.
 
 ## 7. Variables de entorno necesarias
 
@@ -178,6 +200,17 @@ No se deben commitear secretos reales. Variables esperadas:
 - `JWT_REFRESH_TOKEN_DAYS`
 - `DEV_SEED_ENABLED`
 - `DEV_DELIVERY_USER_ID`
+
+Configuración local usada:
+
+```properties
+DB_URL=jdbc:postgresql://localhost:5433/postgres
+DB_USER=armando
+DB_PASSWORD=1234
+DEV_SEED_ENABLED=true
+```
+
+Nota local: el puerto `5433` corresponde al contenedor Docker `pnc-postgres` (`postgres:16`). PostGIS debe estar instalado dentro de ese contenedor o debe usarse una imagen `postgis/postgis`; instalar PostGIS solo en el host no alcanza para esa instancia.
 
 ## 8. Datos seed dev
 
@@ -209,24 +242,34 @@ Comandos ejecutados:
 
 ```bash
 ./mvnw -q test
-./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8081 --app.seed.enabled=true"
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8081"
 ```
 
 Resultado:
 
 - Tests Maven: verdes.
-- Spring Boot: arrancó correctamente en `8081`.
-- Flyway: validó 7 migraciones y schema en versión 6.
-- Seed dev: ejecutó sin error.
+- PostGIS: habilitado en PostgreSQL local con `postgis_version() = 3.6 USE_GEOS=1 USE_PROJ=1 USE_STATS=1`.
+- Spring Boot: arrancó correctamente en `8081` contra PostgreSQL local con PostGIS.
+- Hibernate Spatial: habilitado.
+- Flyway: validó 9 migraciones y schema en versión 9.
+- Seed dev: ejecutó sin error usando `ST_SetSRID(ST_MakePoint(...), 4326)::geography`.
+- Esquema verificado: `addresses.location`, `restaurants.location` y `delivery_locations.location` son `geography`; existen índices GiST de ubicación.
 
 Pruebas HTTP manuales ejecutadas:
 
 | Caso | Resultado |
 | --- | --- |
 | `GET /api/restaurants` | `200` |
+| `GET /api/restaurants/page?page=0&size=5` | `200` |
+| `GET /api/products/page?page=0&size=5` | `200` |
+| `GET /api/categories/page?page=0&size=5` | `200` |
 | `GET /api/cart` sin token | `401` |
 | `POST /api/auth/login` cliente seed | `200`, token y refresh presentes |
+| `GET /api/auth/me` con token cliente | `200` |
+| `GET /api/users/me/addresses` con token cliente | `200` |
 | `GET /api/auth/me` con JWT | `200` |
+| `GET /api/users/me/addresses` con JWT | `200` |
+| `PUT /api/users/me` sin password | `200` |
 | `GET /api/cart` con JWT cliente | `200` |
 | `POST /api/cart/items` | `201` |
 | `POST /api/orders` con cupón `DEV10` | `201` |
@@ -239,10 +282,9 @@ Pruebas HTTP manuales ejecutadas:
 
 ## 10. Pendientes reales
 
-- Agregar más pruebas unitarias/MVC para todos los módulos nuevos; hoy se validó compilación, tests existentes y flujo HTTP manual.
-- Separar DTO de actualización de usuario para no exigir password en `PUT /api/users/me` y `PUT /api/users/{id}`.
 - Afinar reportes administrativos si el frontend necesita más filtros, fechas o paginación.
-- Agregar paginación en listados grandes.
+- Migrar la paginación en memoria a queries paginadas reales de repositorio cuando existan volúmenes altos.
+- Agregar más pruebas unitarias/MVC para todos los módulos nuevos que aún no tienen cobertura dedicada.
 - Revisar si se quiere una política formal de refresh token reuse/revocation más estricta.
 - Endurecer configuración de Swagger para producción si se despliega públicamente.
 
@@ -272,4 +314,3 @@ En puerto alterno:
 ```bash
 ./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8081 --app.seed.enabled=true"
 ```
-

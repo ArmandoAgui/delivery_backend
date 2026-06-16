@@ -2,6 +2,7 @@ package sv.edu.uca.delivery.backend.order.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
+import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 import sv.edu.uca.delivery.backend.order.dto.request.CreateOrderFromCartRequest;
 import sv.edu.uca.delivery.backend.order.dto.response.OrderResponse;
 import sv.edu.uca.delivery.backend.order.dto.response.OrderTrackingResponse;
@@ -42,9 +45,19 @@ public class OrderController {
         return orderService.myHistory();
     }
 
+    @GetMapping("/my-history/page")
+    public PageResponse<OrderResponse> myHistoryPaged(Pageable pageable) {
+        return PaginationUtils.toPage(orderService.myHistory(), pageable);
+    }
+
     @GetMapping("/restaurant")
     public List<OrderResponse> restaurantOrders() {
         return orderService.restaurantOrders();
+    }
+
+    @GetMapping("/restaurant/page")
+    public PageResponse<OrderResponse> restaurantOrdersPaged(Pageable pageable) {
+        return PaginationUtils.toPage(orderService.restaurantOrders(), pageable);
     }
 
     @PatchMapping("/{id}/cancel")

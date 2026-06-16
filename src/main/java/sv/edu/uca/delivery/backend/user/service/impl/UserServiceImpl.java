@@ -10,6 +10,7 @@ import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.auth.repository.RoleRepository;
 import sv.edu.uca.delivery.backend.common.exception.BusinessException;
 import sv.edu.uca.delivery.backend.user.dto.request.RegisterRequest;
+import sv.edu.uca.delivery.backend.user.dto.request.UpdateUserRequest;
 import sv.edu.uca.delivery.backend.user.dto.response.UserResponse;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.exception.UserNotFoundException;
@@ -64,7 +65,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse update(UUID id, RegisterRequest request) {
+    public UserResponse update(UUID id, UpdateUserRequest request) {
         User user = userRepository.findByIdWithRole(id).orElseThrow(UserNotFoundException::new);
         apply(user, request);
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
@@ -86,6 +87,13 @@ public class UserServiceImpl implements UserService {
     }
 
     private void apply(User user, RegisterRequest request) {
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail().toLowerCase());
+        user.setPhone(request.getPhone());
+    }
+
+    private void apply(User user, UpdateUserRequest request) {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setEmail(request.getEmail().toLowerCase());

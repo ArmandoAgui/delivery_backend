@@ -2,12 +2,15 @@ package sv.edu.uca.delivery.backend.category.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sv.edu.uca.delivery.backend.category.dto.CategoryCreateDTO;
 import sv.edu.uca.delivery.backend.category.dto.CategoryUpdateDTO;
 import sv.edu.uca.delivery.backend.category.dto.response.CategoryResponseDTO;
 import sv.edu.uca.delivery.backend.category.service.CategoryService;
+import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
+import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +33,11 @@ public class CategoryController {
     @GetMapping
     public List<CategoryResponseDTO> findAll() {
         return categoryService.findAll();
+    }
+
+    @GetMapping("/page")
+    public PageResponse<CategoryResponseDTO> findAllPaged(Pageable pageable) {
+        return PaginationUtils.toPage(categoryService.findAll(), pageable);
     }
 
     @GetMapping("/{id}")
@@ -60,5 +68,13 @@ public class CategoryController {
             @PathVariable UUID restaurantId
     ) {
         return categoryService.findByRestaurant(restaurantId);
+    }
+
+    @GetMapping("/restaurant/{restaurantId}/page")
+    public PageResponse<CategoryResponseDTO> findByRestaurantPaged(
+            @PathVariable UUID restaurantId,
+            Pageable pageable
+    ) {
+        return PaginationUtils.toPage(categoryService.findByRestaurant(restaurantId), pageable);
     }
 }
