@@ -10,6 +10,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.locationtech.jts.geom.Point;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
 
@@ -31,6 +32,30 @@ public class Restaurant {
 
     @Column(nullable = false, length = 150)
     private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(length = 30)
+    private String phone;
+
+    @Column(length = 150)
+    private String email;
+
+    @Column(name = "street_address", nullable = false)
+    private String streetAddress;
+
+    @Column(nullable = false, length = 120)
+    private String city;
+
+    @Column(length = 120)
+    private String state;
+
+    @Column(nullable = false, length = 120)
+    private String country;
+
+    @Column(nullable = false, columnDefinition = "GEOGRAPHY(Point, 4326)")
+    private Point location;
 
     @Column(name = "is_open", nullable = false)
     private boolean open;
