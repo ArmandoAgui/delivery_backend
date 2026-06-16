@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import sv.edu.uca.delivery.backend.complaint.exception.ComplaintException;
 import sv.edu.uca.delivery.backend.delivery.exception.DeliveryException;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantOwnerAlreadyHasRestaurantException;
@@ -22,6 +23,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DeliveryException.class)
     ResponseEntity<ApiErrorResponse> handleDeliveryException(
             DeliveryException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(exception.getStatus(), exception.getMessage(), request.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(ComplaintException.class)
+    ResponseEntity<ApiErrorResponse> handleComplaintException(
+            ComplaintException exception,
             HttpServletRequest request
     ) {
         return buildResponse(exception.getStatus(), exception.getMessage(), request.getRequestURI(), List.of());

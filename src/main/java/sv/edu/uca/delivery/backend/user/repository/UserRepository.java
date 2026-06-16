@@ -12,6 +12,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByIdAndActiveTrue(UUID id);
+
+    Optional<User> findByIdAndActiveTrueAndRoleName(UUID id, RoleName roleName);
+
     @Query("""
             select u
             from User u
