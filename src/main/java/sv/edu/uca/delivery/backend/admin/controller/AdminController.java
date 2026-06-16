@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.admin.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,17 +20,20 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@Tag(name = "Admin", description = "Configuracion administrativa protegida para ADMIN.")
 public class AdminController {
 
     private final AdminService adminService;
 
     @PostMapping("/commissions")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear configuracion de comision")
     public CommissionResponse createCommission(@RequestBody @Valid CommissionRequest request) {
         return adminService.createCommission(request);
     }
 
     @GetMapping("/commissions")
+    @Operation(summary = "Listar comisiones configuradas")
     public List<CommissionResponse> listCommissions() {
         return adminService.listCommissions();
     }

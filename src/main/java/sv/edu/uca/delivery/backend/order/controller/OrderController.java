@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.order.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -25,22 +27,26 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
+@Tag(name = "Orders", description = "Pedidos desde carrito, estados, historial y tracking REST.")
 public class OrderController {
 
     private final OrderService orderService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear pedido desde carrito")
     public OrderResponse create(@RequestBody @Valid CreateOrderFromCartRequest request) {
         return orderService.createFromCart(request);
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar pedido por ID")
     public OrderResponse get(@PathVariable UUID id) {
         return orderService.get(id);
     }
 
     @GetMapping("/my-history")
+    @Operation(summary = "Historial de pedidos del cliente")
     public List<OrderResponse> myHistory() {
         return orderService.myHistory();
     }
@@ -51,6 +57,7 @@ public class OrderController {
     }
 
     @GetMapping("/restaurant")
+    @Operation(summary = "Pedidos del restaurante propio")
     public List<OrderResponse> restaurantOrders() {
         return orderService.restaurantOrders();
     }
@@ -61,21 +68,25 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/cancel")
+    @Operation(summary = "Cancelar pedido", description = "Solo cliente propietario o ADMIN; permitido antes de confirmacion.")
     public OrderResponse cancel(@PathVariable UUID id) {
         return orderService.cancel(id);
     }
 
     @PatchMapping("/{id}/confirm")
+    @Operation(summary = "Confirmar pedido", description = "Solo ADMIN o restaurante propietario.")
     public OrderResponse confirm(@PathVariable UUID id) {
         return orderService.confirm(id);
     }
 
     @PatchMapping("/{id}/reject")
+    @Operation(summary = "Rechazar pedido", description = "Solo ADMIN o restaurante propietario.")
     public OrderResponse reject(@PathVariable UUID id) {
         return orderService.reject(id);
     }
 
     @GetMapping("/{id}/tracking")
+    @Operation(summary = "Tracking REST del pedido", description = "Consulta periodica/polling. No usa WebSockets.")
     public OrderTrackingResponse tracking(@PathVariable UUID id) {
         return orderService.tracking(id);
     }

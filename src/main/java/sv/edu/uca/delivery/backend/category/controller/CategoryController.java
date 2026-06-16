@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.category.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -18,12 +20,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping({"/categories", "/api/categories"})
 @RequiredArgsConstructor
+@Tag(name = "Categories", description = "Categorias de menu por restaurante.")
 public class CategoryController {
 
     private final CategoryService categoryService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear categoria")
     public CategoryResponseDTO create(
             @RequestBody @Valid CategoryCreateDTO dto
     ) {
@@ -31,16 +35,19 @@ public class CategoryController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar categorias")
     public List<CategoryResponseDTO> findAll() {
         return categoryService.findAll();
     }
 
     @GetMapping("/page")
+    @Operation(summary = "Listar categorias paginadas")
     public PageResponse<CategoryResponseDTO> findAllPaged(Pageable pageable) {
         return PaginationUtils.toPage(categoryService.findAll(), pageable);
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar categoria por ID")
     public CategoryResponseDTO findById(
             @PathVariable Long id
     ) {
@@ -48,6 +55,7 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar categoria")
     public CategoryResponseDTO update(
             @PathVariable Long id,
             @RequestBody @Valid CategoryUpdateDTO dto
@@ -57,6 +65,7 @@ public class CategoryController {
 
     @PatchMapping("/{id}/deactivate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Desactivar categoria")
     public void softDelete(
             @PathVariable Long id
     ) {
@@ -64,6 +73,7 @@ public class CategoryController {
     }
 
     @GetMapping("/restaurant/{restaurantId}")
+    @Operation(summary = "Listar categorias por restaurante")
     public List<CategoryResponseDTO> findByRestaurant(
             @PathVariable UUID restaurantId
     ) {

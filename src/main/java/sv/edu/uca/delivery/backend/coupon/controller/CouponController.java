@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.coupon.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,37 +23,44 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/coupons")
 @RequiredArgsConstructor
+@Tag(name = "Coupons", description = "Administracion de cupones, vigencia, activacion y desactivacion.")
 public class CouponController {
 
     private final CouponService couponService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear cupon", description = "Crea un cupon con reglas de descuento, vigencia y monto minimo.")
     public CouponResponse create(@RequestBody @Valid CouponRequest request) {
         return couponService.create(request);
     }
 
     @GetMapping
+    @Operation(summary = "Listar cupones", description = "Obtiene todos los cupones registrados.")
     public List<CouponResponse> findAll() {
         return couponService.findAll();
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar cupon", description = "Obtiene un cupon por identificador.")
     public CouponResponse findById(@PathVariable Long id) {
         return couponService.findById(id);
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar cupon", description = "Actualiza las reglas y datos principales de un cupon.")
     public CouponResponse update(@PathVariable Long id, @RequestBody @Valid CouponRequest request) {
         return couponService.update(id, request);
     }
 
     @PatchMapping("/{id}/activate")
+    @Operation(summary = "Activar cupon", description = "Marca un cupon como disponible para su uso.")
     public CouponResponse activate(@PathVariable Long id) {
         return couponService.setActive(id, true);
     }
 
     @PatchMapping("/{id}/deactivate")
+    @Operation(summary = "Desactivar cupon", description = "Deshabilita un cupon sin eliminar su historial.")
     public CouponResponse deactivate(@PathVariable Long id) {
         return couponService.setActive(id, false);
     }

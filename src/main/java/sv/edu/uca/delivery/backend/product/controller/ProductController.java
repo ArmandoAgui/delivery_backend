@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.product.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -19,12 +21,14 @@ import java.util.List;
 @RestController
 @RequestMapping({"/products", "/api/products"})
 @RequiredArgsConstructor
+@Tag(name = "Products", description = "Productos/menu, precios, disponibilidad y categorias.")
 public class ProductController {
 
     private final ProductService productService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear producto")
     public ProductResponseDTO create(
             @RequestBody @Valid ProductCreateDTO dto
     ) {
@@ -32,16 +36,19 @@ public class ProductController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar productos")
     public List<ProductResponseDTO> findAll() {
         return productService.findAll();
     }
 
     @GetMapping("/page")
+    @Operation(summary = "Listar productos paginados")
     public PageResponse<ProductResponseDTO> findAllPaged(Pageable pageable) {
         return PaginationUtils.toPage(productService.findAll(), pageable);
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar producto por ID")
     public ProductResponseDTO findById(
             @PathVariable UUID id
     ) {
@@ -49,6 +56,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar producto")
     public ProductResponseDTO update(
             @PathVariable UUID id,
             @RequestBody @Valid ProductUpdateDTO dto
@@ -58,6 +66,7 @@ public class ProductController {
 
     @PatchMapping("/{id}/deactivate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Desactivar producto")
     public void softDelete(
             @PathVariable UUID id
     ) {
@@ -65,6 +74,7 @@ public class ProductController {
     }
 
     @GetMapping("/restaurant/{restaurantId}")
+    @Operation(summary = "Listar productos por restaurante")
     public List<ProductResponseDTO> findByRestaurant(
             @PathVariable UUID restaurantId
     ) {
@@ -80,6 +90,7 @@ public class ProductController {
     }
 
     @GetMapping("/available")
+    @Operation(summary = "Listar productos disponibles")
     public List<ProductResponseDTO> findAvailable() {
         return productService.findAvailable();
     }
@@ -91,6 +102,7 @@ public class ProductController {
 
 
     @GetMapping("/category/{categoryId}")
+    @Operation(summary = "Listar productos por categoria")
     public List<ProductResponseDTO> findByCategory(
             @PathVariable Long categoryId
     ) {
@@ -107,6 +119,7 @@ public class ProductController {
 
 
     @PatchMapping("/{id}/availability")
+    @Operation(summary = "Actualizar disponibilidad de producto")
     public ProductResponseDTO updateAvailability(
             @PathVariable UUID id,
             @RequestBody ProductAvailabilityDTO dto

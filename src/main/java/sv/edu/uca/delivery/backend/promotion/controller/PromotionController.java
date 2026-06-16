@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.promotion.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -19,12 +21,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping({"/promotions", "/api/promotions"})
 @RequiredArgsConstructor
+@Tag(name = "Promotions", description = "Promociones del catalogo por restaurante.")
 public class PromotionController {
 
     private final PromotionService promotionService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear promocion")
     public PromotionResponseDTO create(
             @RequestBody @Valid PromotionCreateDTO dto
     ) {
@@ -32,6 +36,7 @@ public class PromotionController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar promociones")
     public List<PromotionResponseDTO> findAll() {
         return promotionService.findAll();
     }
@@ -42,6 +47,7 @@ public class PromotionController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar promocion por ID")
     public PromotionResponseDTO findById(
             @PathVariable Long id
     ) {
@@ -49,6 +55,7 @@ public class PromotionController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar promocion")
     public PromotionResponseDTO update(
             @PathVariable Long id,
             @RequestBody @Valid PromotionUpdateDTO dto
@@ -58,6 +65,7 @@ public class PromotionController {
 
     @PatchMapping("/{id}/deactivate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Desactivar promocion")
     public void softDelete(
             @PathVariable Long id
     ) {
@@ -65,6 +73,7 @@ public class PromotionController {
     }
 
     @GetMapping("/restaurant/{restaurantId}")
+    @Operation(summary = "Listar promociones por restaurante")
     public List<PromotionResponseDTO> findByRestaurant(
             @PathVariable UUID restaurantId
     ) {
@@ -80,6 +89,7 @@ public class PromotionController {
     }
 
     @GetMapping("/active")
+    @Operation(summary = "Listar promociones activas")
     public List<PromotionResponseDTO> findActivePromotions() {
         return promotionService.findActivePromotions();
     }
@@ -90,6 +100,7 @@ public class PromotionController {
     }
 
     @PatchMapping("/{id}/status")
+    @Operation(summary = "Actualizar estado de promocion")
     public PromotionResponseDTO updateStatus(
             @PathVariable Long id,
             @RequestBody PromotionStatusDTO dto

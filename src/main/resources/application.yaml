@@ -52,3 +52,19 @@ server:
   error:
     include-stacktrace: never
     include-message: always
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+    filter: true
+    try-it-out-enabled: true
+    persist-authorization: true
+    default-models-expand-depth: 1
+    default-model-expand-depth: 2

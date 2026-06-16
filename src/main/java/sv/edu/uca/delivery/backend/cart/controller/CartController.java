@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.cart.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,34 +24,40 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
+@Tag(name = "Cart", description = "Carrito activo del cliente y calculo de subtotal.")
 public class CartController {
 
     private final CartService cartService;
 
     @GetMapping
+    @Operation(summary = "Consultar carrito activo")
     public CartResponse getCart() {
         return cartService.getCart();
     }
 
     @PostMapping("/items")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Agregar producto al carrito")
     public CartResponse addItem(@RequestBody @Valid AddCartItemRequest request) {
         return cartService.addItem(request);
     }
 
     @PatchMapping("/items/{id}")
+    @Operation(summary = "Actualizar cantidad de item")
     public CartResponse updateItem(@PathVariable UUID id, @RequestBody @Valid UpdateCartItemRequest request) {
         return cartService.updateItem(id, request);
     }
 
     @DeleteMapping("/items/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Eliminar item del carrito")
     public void removeItem(@PathVariable UUID id) {
         cartService.removeItem(id);
     }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Vaciar carrito")
     public void clearCart() {
         cartService.clearCart();
     }

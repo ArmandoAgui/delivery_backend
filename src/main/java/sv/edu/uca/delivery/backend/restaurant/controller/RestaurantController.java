@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.restaurant.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,12 +23,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping({"/restaurants", "/api/restaurants"})
 @RequiredArgsConstructor
+@Tag(name = "Restaurants", description = "Restaurantes, horarios, estado y busquedas publicas.")
 public class RestaurantController {
 
     private final RestaurantService restaurantService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear restaurante")
     public RestaurantResponseDTO create(
             @RequestBody @Valid RestaurantCreateDTO dto
     ) {
@@ -34,16 +38,19 @@ public class RestaurantController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar restaurantes activos")
     public List<RestaurantResponseDTO> findAll() {
         return restaurantService.findAll();
     }
 
     @GetMapping("/page")
+    @Operation(summary = "Listar restaurantes paginados")
     public PageResponse<RestaurantResponseDTO> findAllPaged(Pageable pageable) {
         return PaginationUtils.toPage(restaurantService.findAll(), pageable);
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar restaurante por ID")
     public RestaurantResponseDTO findById(
             @PathVariable UUID id
     ) {
@@ -51,6 +58,7 @@ public class RestaurantController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar restaurante")
     public RestaurantResponseDTO update(
             @PathVariable UUID id,
             @RequestBody @Valid RestaurantUpdateDTO dto
@@ -60,6 +68,7 @@ public class RestaurantController {
 
     @PatchMapping("/{id}/deactivate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Desactivar restaurante")
     public void softDelete(
             @PathVariable UUID id
     ) {
@@ -67,6 +76,7 @@ public class RestaurantController {
     }
 
     @GetMapping("/open")
+    @Operation(summary = "Listar restaurantes abiertos")
     public List<RestaurantResponseDTO> findOpenRestaurants() {
         return restaurantService.findOpenRestaurants();
     }
@@ -77,6 +87,7 @@ public class RestaurantController {
     }
 
     @GetMapping("/{id}/schedules")
+    @Operation(summary = "Consultar horarios del restaurante")
     public List<RestaurantScheduleDTO> findSchedules(
             @PathVariable UUID id
     ) {
@@ -84,6 +95,7 @@ public class RestaurantController {
     }
 
     @PutMapping("/{id}/schedules")
+    @Operation(summary = "Actualizar horarios del restaurante")
     public List<RestaurantScheduleDTO> updateSchedules(
             @PathVariable UUID id,
             @RequestBody @Valid List<@Valid RestaurantScheduleRequestDTO> schedules

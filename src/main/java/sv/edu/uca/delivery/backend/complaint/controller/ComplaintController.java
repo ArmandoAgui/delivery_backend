@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.complaint.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,17 +26,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/complaints")
 @RequiredArgsConstructor
+@Tag(name = "Complaints", description = "Reclamos de clientes, consulta administrativa y resolucion de estados.")
 public class ComplaintController {
 
     private final ComplaintService complaintService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear reclamo", description = "Permite al cliente autenticado crear un reclamo sobre un pedido valido.")
     public ComplaintResponse createComplaint(@Valid @RequestBody CreateComplaintRequest request) {
         return complaintService.createComplaint(request);
     }
 
     @GetMapping
+    @Operation(summary = "Listar reclamos", description = "Lista reclamos con filtros opcionales por estado y pedido.")
     public List<ComplaintResponse> listComplaints(
             @RequestParam(required = false) ComplaintStatus status,
             @RequestParam(required = false) UUID orderId
@@ -43,11 +48,13 @@ public class ComplaintController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar reclamo", description = "Obtiene el detalle de un reclamo por identificador.")
     public ComplaintResponse getComplaint(@PathVariable UUID id) {
         return complaintService.getComplaint(id);
     }
 
     @PatchMapping("/{id}/status")
+    @Operation(summary = "Actualizar estado de reclamo", description = "Permite avanzar el flujo administrativo del reclamo.")
     public ComplaintResponse updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateComplaintStatusRequest request

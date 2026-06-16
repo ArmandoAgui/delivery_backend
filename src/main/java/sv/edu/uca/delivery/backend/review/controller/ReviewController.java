@@ -1,5 +1,7 @@
 package sv.edu.uca.delivery.backend.review.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,17 +22,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
+@Tag(name = "Reviews", description = "Calificaciones de restaurantes y repartidores sobre pedidos entregados.")
 public class ReviewController {
 
     private final ReviewService reviewService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear calificacion", description = "Registra una calificacion asociada a un pedido entregado.")
     public ReviewResponse create(@RequestBody @Valid CreateReviewRequest request) {
         return reviewService.create(request);
     }
 
     @GetMapping("/restaurant/{restaurantId}")
+    @Operation(summary = "Calificaciones por restaurante", description = "Lista reviews publicas de un restaurante.")
     public List<ReviewResponse> byRestaurant(@PathVariable UUID restaurantId) {
         return reviewService.byRestaurant(restaurantId);
     }
