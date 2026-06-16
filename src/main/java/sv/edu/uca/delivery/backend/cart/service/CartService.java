@@ -1,0 +1,132 @@
+package sv.edu.uca.delivery.backend.cart.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import sv.edu.uca.delivery.backend.auth.entity.RoleName;
+import sv.edu.uca.delivery.backend.cart.dto.AddCartItemRequest;
+import sv.edu.uca.delivery.backend.cart.dto.CartItemResponse;
+import sv.edu.uca.delivery.backend.cart.dto.CartResponse;
+import sv.edu.uca.delivery.backend.cart.dto.UpdateCartItemRequest;
+import sv.edu.uca.delivery.backend.cart.entity.Cart;
+import sv.edu.uca.delivery.backend.cart.entity.CartItem;
+import sv.edu.uca.delivery.backend.cart.entity.CartStatus;
+import sv.edu.uca.delivery.backend.cart.repository.CartItemRepository;
+import sv.edu.uca.delivery.backend.cart.repository.CartRepository;
+import sv.edu.uca.delivery.backend.common.exception.BusinessException;
+import sv.edu.uca.delivery.backend.product.entity.Product;
+import sv.edu.uca.delivery.backend.product.repository.ProductRepository;
+import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
+import sv.edu.uca.delivery.backend.user.entity.User;
+import sv.edu.uca.delivery.backend.user.repository.UserRepository;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class CartService {
+
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
+    private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
+
+    @Transactional(readOnly = true)
+    public CartResponse getCart() {
+        return cartRepository.findFirstByCustomerIdAndStatusOrderByCreatedAtDesc(currentCustomerId(), CartStatus.ACTIVE)
+                .map(this::toResponse)
+                .orElse(new CartResponse(null, null, null, BigDecimal.ZERO, java.util.List.of()));
+    }
+
+    @Transactional
+    public CartResponse addItem(AddCartItemRequest request) {
+        UUID customerId = currentCustomerId();
+        User customer = userRepository.findByIdAndActiveTrueAndRoleName(customerId, RoleName.CUSTOMER)
+                .orElseThrow(() -> new BusinessException(HttpStatus.FORBIDDEN, "Only active customers can use carts"));
+        Product product = productRepository.findById(request.productId())
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Product not found"));
+        if (!product.isAvailable()) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Product is not available");
+        }
+
+        Cart cart = cartRepository
+                .findFirstByCustomerIdAndRestaurantIdAndStatusOrderByCreatedAtDesc(
+                        customerId,
+                        product.getRestaurant().getId(),
+                        CartStatus.ACTIVE
+                )
+                .orElseGet(() -> {
+                    cartRepository.findFirstByCustomerIdAndStatusOrderByCreatedAtDesc(customerId, CartStatus.ACTIVE)
+                            .filter(existing -> !existing.getRestaurant().getId().equals(product.getRestaurant().getId()))
+                            .ifPresent(existing -> {
+                                throw new BusinessException(HttpStatus.CONFLICT, "Cart already has products from another restaurant");
+                            });
+                    Cart created = new Cart();
+                    created.setCustomer(customer);
+                    created.setRestaurant(product.getRestaurant());
+                    return created;
+                });
+
+        CartItem item = cart.getItems().stream()
+                .filter(existing -> existing.getProduct().getId().equals(product.getId()))
+                .findFirst()
+                .orElseGet(() -> {
+                    CartItem created = new CartItem();
+                    created.setCart(cart);
+                    created.setProduct(product);
+                    created.setQuantity(0);
+                    created.setUnitPrice(product.getPrice());
+                    cart.getItems().add(created);
+                    return created;
+                });
+        item.setQuantity(item.getQuantity() + request.quantity());
+        item.setUnitPrice(product.getPrice());
+        return toResponse(cartRepository.save(cart));
+    }
+
+    @Transactional
+    public CartResponse updateItem(UUID itemId, UpdateCartItemRequest request) {
+        CartItem item = cartItemRepository.findByIdAndCartCustomerId(itemId, currentCustomerId())
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Cart item not found"));
+        item.setQuantity(request.quantity());
+        cartItemRepository.save(item);
+        return toResponse(item.getCart());
+    }
+
+    @Transactional
+    public void removeItem(UUID itemId) {
+        CartItem item = cartItemRepository.findByIdAndCartCustomerId(itemId, currentCustomerId())
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Cart item not found"));
+        cartItemRepository.delete(item);
+    }
+
+    @Transactional
+    public void clearCart() {
+        cartRepository.findFirstByCustomerIdAndStatusOrderByCreatedAtDesc(currentCustomerId(), CartStatus.ACTIVE)
+                .ifPresent(cartRepository::delete);
+    }
+
+    public CartResponse toResponse(Cart cart) {
+        var items = cart.getItems().stream()
+                .map(item -> new CartItemResponse(
+                        item.getId(),
+                        item.getProduct().getId(),
+                        item.getProduct().getName(),
+                        item.getQuantity(),
+                        item.getUnitPrice(),
+                        item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+                ))
+                .toList();
+        BigDecimal subtotal = items.stream()
+                .map(CartItemResponse::lineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new CartResponse(cart.getId(), cart.getRestaurant().getId(), cart.getRestaurant().getName(), subtotal, items);
+    }
+
+    private UUID currentCustomerId() {
+        return authenticatedUserProvider.getCurrentUserId();
+    }
+}

@@ -1,6 +1,6 @@
 package sv.edu.uca.delivery.backend.restaurant.service.impl;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
@@ -19,6 +19,7 @@ import sv.edu.uca.delivery.backend.restaurant.mapper.RestaurantMapper;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantScheduleRepository;
 import sv.edu.uca.delivery.backend.restaurant.service.RestaurantService;
+import sv.edu.uca.delivery.backend.security.AccessControlService;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 
@@ -30,12 +31,36 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class RestaurantServiceImpl implements RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
     private final RestaurantScheduleRepository restaurantScheduleRepository;
+    private final AccessControlService accessControlService;
+
+    @Autowired
+    public RestaurantServiceImpl(
+            RestaurantRepository restaurantRepository,
+            UserRepository userRepository,
+            RestaurantScheduleRepository restaurantScheduleRepository,
+            AccessControlService accessControlService
+    ) {
+        this.restaurantRepository = restaurantRepository;
+        this.userRepository = userRepository;
+        this.restaurantScheduleRepository = restaurantScheduleRepository;
+        this.accessControlService = accessControlService;
+    }
+
+    public RestaurantServiceImpl(
+            RestaurantRepository restaurantRepository,
+            UserRepository userRepository,
+            RestaurantScheduleRepository restaurantScheduleRepository
+    ) {
+        this.restaurantRepository = restaurantRepository;
+        this.userRepository = userRepository;
+        this.restaurantScheduleRepository = restaurantScheduleRepository;
+        this.accessControlService = null;
+    }
 
     @Override
     @Transactional
@@ -43,6 +68,12 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         User owner = userRepository.findActiveUserByIdAndRole(dto.getOwnerId(), RoleName.RESTAURANT)
                 .orElseThrow(RestaurantOwnerNotFoundException::new);
+        if (accessControlService != null) {
+            User current = accessControlService.currentUser();
+            if (current.getRole().getName() != RoleName.ADMIN && !current.getId().equals(owner.getId())) {
+                accessControlService.requireAdmin();
+            }
+        }
 
         if (restaurantRepository.existsByOwnerId(owner.getId())) {
             throw new RestaurantOwnerAlreadyHasRestaurantException();
@@ -76,6 +107,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
+        requireOwner(restaurant);
 
         return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
     }
@@ -86,6 +118,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
+        requireOwner(restaurant);
 
         applyUpdateFields(restaurant, dto);
 
@@ -136,6 +169,7 @@ public class RestaurantServiceImpl implements RestaurantService {
             List<RestaurantScheduleRequestDTO> schedules
     ) {
         Restaurant restaurant = findActiveRestaurant(restaurantId);
+        requireOwner(restaurant);
         validateSchedules(schedules);
 
         schedules.forEach(request -> {
@@ -185,6 +219,12 @@ public class RestaurantServiceImpl implements RestaurantService {
     private Restaurant findActiveRestaurant(UUID restaurantId) {
         return restaurantRepository.findByIdAndActiveTrue(restaurantId)
                 .orElseThrow(RestaurantNotFoundException::new);
+    }
+
+    private void requireOwner(Restaurant restaurant) {
+        if (accessControlService != null) {
+            accessControlService.requireAdminOrRestaurantOwner(restaurant);
+        }
     }
 
     private boolean isCurrentlyOpen(UUID restaurantId, LocalDateTime now) {

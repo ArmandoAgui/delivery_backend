@@ -16,6 +16,7 @@ import sv.edu.uca.delivery.backend.promotion.service.PromotionService;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
+import sv.edu.uca.delivery.backend.security.AccessControlService;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,6 +28,7 @@ public class PromotionServiceImpl implements PromotionService {
 
     private final PromotionRepository promotionRepository;
     private final RestaurantRepository restaurantRepository;
+    private final AccessControlService accessControlService;
 
     @Override
     @Transactional
@@ -35,6 +37,7 @@ public class PromotionServiceImpl implements PromotionService {
         Restaurant restaurant = restaurantRepository
                 .findByIdAndActiveTrue(dto.getRestaurantId())
                 .orElseThrow(RestaurantNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(restaurant);
 
         validateDates(dto.getStartDate(), dto.getEndDate());
 
@@ -74,6 +77,7 @@ public class PromotionServiceImpl implements PromotionService {
         Promotion promotion = promotionRepository
                 .findById(id)
                 .orElseThrow(PromotionNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(promotion.getRestaurant());
 
         return PromotionMapper.toDTO(promotion);
     }
@@ -85,6 +89,7 @@ public class PromotionServiceImpl implements PromotionService {
         Promotion promotion = promotionRepository
                 .findById(id)
                 .orElseThrow(PromotionNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(promotion.getRestaurant());
 
         validateDates(dto.getStartDate(), dto.getEndDate());
 
@@ -106,6 +111,7 @@ public class PromotionServiceImpl implements PromotionService {
         Promotion promotion = promotionRepository
                 .findById(id)
                 .orElseThrow(PromotionNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(promotion.getRestaurant());
 
         promotion.setActive(false);
 

@@ -20,6 +20,7 @@ import sv.edu.uca.delivery.backend.category.exception.CategoryNotFoundException;
 import sv.edu.uca.delivery.backend.category.repository.CategoryRepository;
 
 import sv.edu.uca.delivery.backend.promotion.entity.Promotion;
+import sv.edu.uca.delivery.backend.security.AccessControlService;
 import java.time.LocalDate;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
 
     private final PromotionRepository promotionRepository;
+    private final AccessControlService accessControlService;
 
     @Override
     @Transactional
@@ -43,12 +45,16 @@ public class ProductServiceImpl implements ProductService {
         Restaurant restaurant = restaurantRepository
                 .findByIdAndActiveTrue(dto.getRestaurantId())
                 .orElseThrow(RestaurantNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(restaurant);
 
         Product product = new Product();
 
         Category category = categoryRepository
                 .findByIdAndActiveTrue(dto.getCategoryId())
                         .orElseThrow(CategoryNotFoundException::new);
+        if (!category.getRestaurant().getId().equals(restaurant.getId())) {
+            throw new sv.edu.uca.delivery.backend.common.exception.BusinessException(org.springframework.http.HttpStatus.BAD_REQUEST, "Category does not belong to restaurant");
+        }
 
         product.setRestaurant(restaurant);
         product.setCategory(category);
@@ -107,6 +113,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository
                 .findById(id)
                 .orElseThrow(ProductNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(product.getRestaurant());
 
         product.setAvailable(available);
         productRepository.save(product);
@@ -142,6 +149,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository
                 .findById(id)
                 .orElseThrow(ProductNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(product.getRestaurant());
 
         return ProductMapper.toDTO(
                 product,
@@ -160,6 +168,9 @@ public class ProductServiceImpl implements ProductService {
         Category category = categoryRepository
                 .findByIdAndActiveTrue(dto.getCategoryId())
                         .orElseThrow(CategoryNotFoundException::new);
+        if (!category.getRestaurant().getId().equals(product.getRestaurant().getId())) {
+            throw new sv.edu.uca.delivery.backend.common.exception.BusinessException(org.springframework.http.HttpStatus.BAD_REQUEST, "Category does not belong to restaurant");
+        }
 
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
@@ -179,6 +190,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository
                 .findById(id)
                 .orElseThrow(ProductNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(product.getRestaurant());
 
         // desactivar disponibilidad
         product.setAvailable(false);

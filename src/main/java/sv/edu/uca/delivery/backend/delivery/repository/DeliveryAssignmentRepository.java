@@ -24,6 +24,8 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
 
     Optional<DeliveryAssignment> findByIdAndDeliveryUserId(UUID id, UUID deliveryUserId);
 
+    Optional<DeliveryAssignment> findByOrderId(UUID orderId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select da from DeliveryAssignment da where da.id = :id")
     Optional<DeliveryAssignment> findWithLockingById(UUID id);
@@ -54,4 +56,21 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
             for update of u skip locked
             """, nativeQuery = true)
     Optional<User> findNearestAvailableDeliveryUser(@Param("orderId") UUID orderId);
+
+    @Query("""
+            select u
+            from User u
+            join fetch u.role r
+            where u.active = true
+              and r.name = sv.edu.uca.delivery.backend.auth.entity.RoleName.DELIVERY
+              and not exists (
+                  select 1
+                  from DeliveryAssignment da
+                  where da.deliveryUser.id = u.id
+                    and da.status in :statuses
+              )
+            order by u.createdAt asc
+            limit 1
+            """)
+    Optional<User> findFirstAvailableDeliveryUser(@Param("statuses") Collection<DeliveryStatus> statuses);
 }

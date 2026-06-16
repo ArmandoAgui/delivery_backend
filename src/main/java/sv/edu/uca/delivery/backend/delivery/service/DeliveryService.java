@@ -1,6 +1,6 @@
 package sv.edu.uca.delivery.backend.delivery.service;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
@@ -16,6 +16,7 @@ import sv.edu.uca.delivery.backend.delivery.repository.DeliveryAssignmentReposit
 import sv.edu.uca.delivery.backend.order.entity.Order;
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
 import sv.edu.uca.delivery.backend.order.repository.OrderRepository;
+import sv.edu.uca.delivery.backend.order.service.OrderService;
 import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class DeliveryService {
 
     private static final EnumSet<DeliveryStatus> BUSY_STATUSES = EnumSet.of(
@@ -40,6 +40,39 @@ public class DeliveryService {
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final DeliveryMapper deliveryMapper;
     private final AuthenticatedUserProvider authenticatedUserProvider;
+    private final OrderService orderService;
+
+    @Autowired
+    public DeliveryService(
+            OrderRepository orderRepository,
+            UserRepository userRepository,
+            DeliveryAssignmentRepository deliveryAssignmentRepository,
+            DeliveryMapper deliveryMapper,
+            AuthenticatedUserProvider authenticatedUserProvider,
+            OrderService orderService
+    ) {
+        this.orderRepository = orderRepository;
+        this.userRepository = userRepository;
+        this.deliveryAssignmentRepository = deliveryAssignmentRepository;
+        this.deliveryMapper = deliveryMapper;
+        this.authenticatedUserProvider = authenticatedUserProvider;
+        this.orderService = orderService;
+    }
+
+    public DeliveryService(
+            OrderRepository orderRepository,
+            UserRepository userRepository,
+            DeliveryAssignmentRepository deliveryAssignmentRepository,
+            DeliveryMapper deliveryMapper,
+            AuthenticatedUserProvider authenticatedUserProvider
+    ) {
+        this.orderRepository = orderRepository;
+        this.userRepository = userRepository;
+        this.deliveryAssignmentRepository = deliveryAssignmentRepository;
+        this.deliveryMapper = deliveryMapper;
+        this.authenticatedUserProvider = authenticatedUserProvider;
+        this.orderService = null;
+    }
 
     @Transactional
     public DeliveryResponse assignDelivery(AssignDeliveryRequest request) {
@@ -52,7 +85,8 @@ public class DeliveryService {
         }
 
         User deliveryUser = deliveryAssignmentRepository.findNearestAvailableDeliveryUser(order.getId())
-                .orElseThrow(() -> new DeliveryBusinessException("No available delivery user was found near the order"));
+                .or(() -> deliveryAssignmentRepository.findFirstAvailableDeliveryUser(BUSY_STATUSES))
+                .orElseThrow(() -> new DeliveryBusinessException("No available delivery user was found"));
 
         validateDeliveryUser(deliveryUser.getId());
         if (deliveryAssignmentRepository.existsByDeliveryUserIdAndStatusIn(deliveryUser.getId(), BUSY_STATUSES)) {
@@ -143,7 +177,11 @@ public class DeliveryService {
         }
         if (requestedStatus == DeliveryStatus.DELIVERED) {
             assignment.setDeliveredAt(now);
-            assignment.getOrder().setStatus(OrderStatus.DELIVERED);
+            if (orderService != null) {
+                orderService.markDelivered(assignment.getOrder(), assignment.getDeliveryUser());
+            } else {
+                assignment.getOrder().setStatus(OrderStatus.DELIVERED);
+            }
         }
     }
 }

@@ -13,9 +13,40 @@ public record DeliveryResponse(
         String deliveryUserName,
         DeliveryStatus status,
         OrderStatus orderStatus,
+        String restaurantName,
+        String deliveryAddress,
+        String orderSummary,
         LocalDateTime assignedAt,
         LocalDateTime pickedUpAt,
         LocalDateTime deliveredAt,
         LocalDateTime createdAt
 ) {
+    public DeliveryResponse(
+            UUID id,
+            UUID orderId,
+            UUID deliveryUserId,
+            String deliveryUserName,
+            DeliveryStatus status,
+            OrderStatus orderStatus,
+            LocalDateTime assignedAt,
+            LocalDateTime pickedUpAt,
+            LocalDateTime deliveredAt,
+            LocalDateTime createdAt
+    ) {
+        this(
+                id,
+                orderId,
+                deliveryUserId,
+                deliveryUserName,
+                status,
+                orderStatus,
+                null,
+                null,
+                null,
+                assignedAt,
+                pickedUpAt,
+                deliveredAt,
+                createdAt
+        );
+    }
 }

@@ -10,6 +10,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.locationtech.jts.geom.Point;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
 
@@ -46,6 +47,9 @@ public class Address {
 
     @Column(name = "postal_code", length = 30)
     private String postalCode;
+
+    @Column(nullable = false, columnDefinition = "GEOGRAPHY(Point, 4326)")
+    private Point location;
 
     @Column(name = "is_default", nullable = false)
     private boolean defaultAddress;

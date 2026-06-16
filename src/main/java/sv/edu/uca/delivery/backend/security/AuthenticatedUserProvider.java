@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import sv.edu.uca.delivery.backend.delivery.exception.DeliveryUnauthorizedException;
+import sv.edu.uca.delivery.backend.security.principal.AppUserPrincipal;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 
 import java.util.UUID;
@@ -35,6 +36,10 @@ public class AuthenticatedUserProvider {
                 || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getPrincipal())) {
             return devUserId;
+        }
+
+        if (authentication.getPrincipal() instanceof AppUserPrincipal principal) {
+            return principal.id();
         }
 
         String identity = resolveIdentity(authentication);

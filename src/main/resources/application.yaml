@@ -42,3 +42,13 @@ spring:
 app:
   security:
     dev-user-id: ${DEV_DELIVERY_USER_ID:018f0000-0000-7000-8000-000000000003}
+    jwt-secret: ${JWT_SECRET:delivery-development-secret-key-change-before-production-0123456789}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:60}
+    refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:14}
+  seed:
+    enabled: ${DEV_SEED_ENABLED:false}
+
+server:
+  error:
+    include-stacktrace: never
+    include-message: always

@@ -124,8 +124,13 @@ public class ComplaintService {
     }
 
     private User validateActiveUser(UUID userId) {
-        return userRepository.findByIdAndActiveTrue(userId)
+        User user = userRepository.findByIdWithRole(userId)
+                .or(() -> userRepository.findByIdAndActiveTrue(userId))
                 .orElseThrow(() -> new ComplaintBusinessException("Authenticated user must exist and be active"));
+        if (!user.isActive()) {
+            throw new ComplaintBusinessException("Authenticated user must exist and be active");
+        }
+        return user;
     }
 
     private User validateAdmin(UUID userId) {

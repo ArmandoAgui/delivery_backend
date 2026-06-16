@@ -14,7 +14,7 @@ import sv.edu.uca.delivery.backend.product.dto.ProductAvailabilityDTO;
 import java.util.List;
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping({"/products", "/api/products"})
 @RequiredArgsConstructor
 public class ProductController {
 
@@ -89,4 +89,3 @@ public class ProductController {
     }
 
 }
-

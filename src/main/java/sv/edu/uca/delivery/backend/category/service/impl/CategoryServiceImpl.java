@@ -15,6 +15,7 @@ import sv.edu.uca.delivery.backend.category.service.CategoryService;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.restaurant.exception.RestaurantNotFoundException;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
+import sv.edu.uca.delivery.backend.security.AccessControlService;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final RestaurantRepository restaurantRepository;
+    private final AccessControlService accessControlService;
 
     @Override
     @Transactional
@@ -33,6 +35,7 @@ public class CategoryServiceImpl implements CategoryService {
         Restaurant restaurant = restaurantRepository
                 .findByIdAndActiveTrue(dto.getRestaurantId())
                 .orElseThrow(RestaurantNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(restaurant);
 
         if (categoryRepository.existsByRestaurant_IdAndNameIgnoreCase(
                 dto.getRestaurantId(),
@@ -69,6 +72,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository
                 .findByIdAndActiveTrue(id)
                 .orElseThrow(CategoryNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(category.getRestaurant());
 
         return CategoryMapper.toDTO(category);
     }
@@ -83,6 +87,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository
                 .findByIdAndActiveTrue(id)
                 .orElseThrow(CategoryNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(category.getRestaurant());
 
         category.setName(dto.getName());
         category.setDescription(dto.getDescription());

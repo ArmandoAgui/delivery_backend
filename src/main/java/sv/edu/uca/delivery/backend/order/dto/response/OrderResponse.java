@@ -3,7 +3,7 @@ package sv.edu.uca.delivery.backend.order.dto.response;
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,8 +19,7 @@ public record OrderResponse(
         BigDecimal tipAmount,
         BigDecimal discountAmount,
         BigDecimal totalAmount,
-        Instant createdAt,
-        Instant updatedAt,
+        LocalDateTime createdAt,
         List<OrderItemResponse> items,
         List<OrderStatusHistoryResponse> statusHistory
 ) {}

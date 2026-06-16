@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/promotions")
+@RequestMapping({"/promotions", "/api/promotions"})
 @RequiredArgsConstructor
 public class PromotionController {
 

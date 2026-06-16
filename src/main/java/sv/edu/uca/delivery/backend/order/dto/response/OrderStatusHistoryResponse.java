@@ -9,5 +9,6 @@ public record OrderStatusHistoryResponse(
         UUID id,
         OrderStatus previousStatus,
         OrderStatus newStatus,
-        Instant changedAt
+        Instant changedAt,
+        String notes
 ) {}
