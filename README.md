@@ -29,6 +29,85 @@ Tambien se dejo preparada la estructura de datos para cupones, fidelidad, factur
 - Maven Wrapper
 - JUnit 5, Mockito, MockMvc
 
+## Docker
+
+El backend puede construirse y ejecutarse como una imagen Docker independiente. La imagen no incluye base de datos; esta debe proveerse externamente, por ejemplo desde PostgreSQL/PostGIS local, un servicio administrado o un repositorio futuro de despliegue con Docker Compose, Nginx/Traefik y frontend.
+
+### Construir Imagen
+
+```bash
+docker build -t delivery-backend:local .
+```
+
+### Ejecutar Contenedor
+
+Ejemplo usando PostgreSQL/PostGIS local expuesto en `localhost:5433`:
+
+```bash
+docker run --rm \
+  --name delivery-backend \
+  --network host \
+  -e SERVER_PORT=8080 \
+  -e DB_URL=jdbc:postgresql://localhost:5433/postgres \
+  -e DB_USER=armando \
+  -e DB_PASSWORD=1234 \
+  -e JWT_SECRET=delivery-development-secret-key-change-before-production-0123456789 \
+  -e DEV_SEED_ENABLED=true \
+  delivery-backend:local
+```
+
+Si se prefiere usar archivo de variables:
+
+```bash
+cp docker.env.example docker.env
+docker run --rm --name delivery-backend --network host --env-file docker.env delivery-backend:local
+```
+
+> Nota: `docker.env` esta ignorado por Git para evitar subir secretos locales.
+
+### Variables De Entorno
+
+| Variable | Requerida | Descripcion | Ejemplo |
+| --- | --- | --- | --- |
+| `DB_URL` | Si | URL JDBC de PostgreSQL/PostGIS. | `jdbc:postgresql://db:5432/delivery` |
+| `DB_USER` | Si | Usuario de base de datos. | `delivery_user` |
+| `DB_PASSWORD` | Si | Password de base de datos. | `change-me` |
+| `SERVER_PORT` | No | Puerto interno del backend. | `8080` |
+| `SPRING_PROFILES_ACTIVE` | No | Perfil activo de Spring. | `prod` |
+| `JWT_SECRET` | Si en produccion | Secreto para firmar JWT. Debe ser fuerte y privado. | `change-this-secret` |
+| `JWT_ACCESS_TOKEN_MINUTES` | No | Minutos de vida del access token. | `60` |
+| `JWT_REFRESH_TOKEN_DAYS` | No | Dias de vida del refresh token. | `14` |
+| `DEV_SEED_ENABLED` | No | Activa seed de desarrollo. Usar `false` en produccion. | `false` |
+| `DEV_DELIVERY_USER_ID` | No | Usuario dev de fallback si aplica. | `018f...0003` |
+| `FLYWAY_BASELINE_ON_MIGRATE` | No | Baseline para esquemas existentes. | `false` |
+| `FLYWAY_BASELINE_VERSION` | No | Version de baseline Flyway. | `0` |
+| `DB_POOL_MAX_SIZE` | No | Maximo de conexiones HikariCP. | `10` |
+| `DB_POOL_MIN_IDLE` | No | Minimo de conexiones idle. | `2` |
+| `DB_CONNECTION_TIMEOUT_MS` | No | Timeout de conexion. | `30000` |
+| `DB_IDLE_TIMEOUT_MS` | No | Timeout idle. | `600000` |
+| `DB_MAX_LIFETIME_MS` | No | Vida maxima de conexion. | `1800000` |
+| `JAVA_OPTS` | No | Opciones JVM del contenedor. | `-XX:MaxRAMPercentage=75.0` |
+
+### Puertos
+
+- Backend HTTP: `8080` por defecto.
+- Swagger UI: `/swagger-ui.html`.
+- OpenAPI JSON: `/v3/api-docs`.
+
+### Persistencia De Archivos
+
+Actualmente el backend no escribe archivos de negocio en disco. La persistencia relevante vive en PostgreSQL/PostGIS. Si en el futuro se agregan cargas de imagenes, facturas generadas u otros archivos, esas rutas deberan externalizarse por variable de entorno y montarse como volumen en produccion.
+
+### Preparacion Para Deploy
+
+La imagen queda lista para integrarse despues en un repositorio `deploy` con:
+
+- PostgreSQL/PostGIS como servicio externo.
+- Frontend como servicio independiente.
+- Nginx o Traefik como reverse proxy.
+- Certificados TLS gestionados fuera del backend.
+- Variables sensibles inyectadas mediante secretos del entorno.
+
 ## Arquitectura
 
 El proyecto sigue una arquitectura por modulos de dominio:
