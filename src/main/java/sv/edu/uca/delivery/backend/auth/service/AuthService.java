@@ -49,13 +49,14 @@ public class AuthService {
         if (phone != null && userRepository.existsByPhone(phone)) {
             throw new BusinessException(HttpStatus.CONFLICT, "Phone is already registered");
         }
+        RoleName requestedRole = normalizeSelfRegistrationRole(request.getRole());
         User user = new User();
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setEmail(request.getEmail().toLowerCase());
         user.setPhone(phone);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setRole(roleRepository.findByName(RoleName.CUSTOMER)
+        user.setRole(roleRepository.findByName(requestedRole)
                 .orElseThrow(() -> new BusinessException(HttpStatus.BAD_REQUEST, "Role does not exist")));
         return issue(userRepository.save(user));
     }
@@ -112,5 +113,13 @@ public class AuthService {
             return null;
         }
         return value.trim();
+    }
+
+    private RoleName normalizeSelfRegistrationRole(RoleName role) {
+        RoleName requestedRole = role == null ? RoleName.CUSTOMER : role;
+        if (requestedRole == RoleName.ADMIN) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "Admin users cannot self-register");
+        }
+        return requestedRole;
     }
 }

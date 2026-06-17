@@ -104,6 +104,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository
                 .findByIdAndActiveTrue(id)
                 .orElseThrow(CategoryNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(category.getRestaurant());
 
         category.setActive(false);
 

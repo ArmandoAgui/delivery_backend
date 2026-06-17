@@ -103,6 +103,21 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     @Transactional(readOnly = true)
+    public RestaurantResponseDTO findMine() {
+        if (accessControlService == null) {
+            throw new RestaurantNotFoundException();
+        }
+        User current = accessControlService.currentUser();
+        if (current.getRole().getName() != RoleName.RESTAURANT) {
+            accessControlService.requireAdmin();
+        }
+        Restaurant restaurant = restaurantRepository.findByOwnerIdAndActiveTrue(current.getId())
+                .orElseThrow(RestaurantNotFoundException::new);
+        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public RestaurantResponseDTO findById(UUID id) {
 
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
@@ -145,6 +160,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
+        requireOwner(restaurant);
 
         restaurant.setActive(false);
 

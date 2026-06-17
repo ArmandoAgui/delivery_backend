@@ -49,6 +49,12 @@ public class RestaurantController {
         return PaginationUtils.toPage(restaurantService.findAll(), pageable);
     }
 
+    @GetMapping("/my")
+    @Operation(summary = "Consultar restaurante propio", description = "Devuelve el restaurante asociado al usuario RESTAURANT autenticado.")
+    public RestaurantResponseDTO findMine() {
+        return restaurantService.findMine();
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Consultar restaurante por ID")
     public RestaurantResponseDTO findById(

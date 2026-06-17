@@ -164,6 +164,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository
                 .findById(id)
                 .orElseThrow(ProductNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(product.getRestaurant());
 
         Category category = categoryRepository
                 .findByIdAndActiveTrue(dto.getCategoryId())

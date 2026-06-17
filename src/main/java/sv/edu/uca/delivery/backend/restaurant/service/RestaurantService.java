@@ -15,6 +15,8 @@ public interface RestaurantService {
 
     List<RestaurantResponseDTO> findAll();
 
+    RestaurantResponseDTO findMine();
+
     RestaurantResponseDTO findById(UUID id);
 
     List<RestaurantResponseDTO> search(String query);

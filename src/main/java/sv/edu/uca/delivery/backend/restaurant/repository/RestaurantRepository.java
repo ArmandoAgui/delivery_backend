@@ -22,6 +22,8 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
 
     Optional<Restaurant> findByIdAndActiveTrue(UUID id);
 
+    Optional<Restaurant> findByOwnerIdAndActiveTrue(UUID ownerId);
+
     List<Restaurant> findByOpenTrueAndActiveTrue();
 
     @Query("""
