@@ -45,11 +45,15 @@ public class AuthService {
         if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new BusinessException(HttpStatus.CONFLICT, "Email is already registered");
         }
+        String phone = normalizeOptional(request.getPhone());
+        if (phone != null && userRepository.existsByPhone(phone)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Phone is already registered");
+        }
         User user = new User();
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setEmail(request.getEmail().toLowerCase());
-        user.setPhone(request.getPhone());
+        user.setPhone(phone);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(roleRepository.findByName(RoleName.CUSTOMER)
                 .orElseThrow(() -> new BusinessException(HttpStatus.BAD_REQUEST, "Role does not exist")));
@@ -101,5 +105,12 @@ public class AuthService {
         refresh.setExpiresAt(LocalDateTime.now().plusDays(refreshTokenDays));
         refreshTokenRepository.save(refresh);
         return new AuthResponse(jwtService.createAccessToken(user), refresh.getToken(), userMapper.toResponse(user));
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

@@ -86,6 +86,22 @@ public class RestaurantController {
         return PaginationUtils.toPage(restaurantService.findOpenRestaurants(), pageable);
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "Buscar restaurantes por texto", description = "Busca por nombre, ciudad o descripcion.")
+    public List<RestaurantResponseDTO> search(@RequestParam(name = "q", required = false) String query) {
+        return restaurantService.search(query);
+    }
+
+    @GetMapping("/nearby")
+    @Operation(summary = "Buscar restaurantes cercanos", description = "Usa PostGIS para ordenar restaurantes activos dentro del radio indicado.")
+    public List<RestaurantResponseDTO> findNearby(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "10") double radiusKm
+    ) {
+        return restaurantService.findNearby(lat, lng, radiusKm);
+    }
+
     @GetMapping("/{id}/schedules")
     @Operation(summary = "Consultar horarios del restaurante")
     public List<RestaurantScheduleDTO> findSchedules(

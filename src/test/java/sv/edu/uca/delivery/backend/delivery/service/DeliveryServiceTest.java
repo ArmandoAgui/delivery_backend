@@ -62,16 +62,10 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void assignDeliveryCreatesAssignmentWithNearestAvailableDeliveryUser() {
-        UUID orderId = UUID.randomUUID();
-        User admin = adminUser();
+    void assignAutomaticallyCreatesAssignmentWithNearestAvailableDeliveryUser() {
         User deliveryUser = deliveryUser();
         Order order = order(OrderStatus.READY_FOR_PICKUP);
 
-        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(admin.getId());
-        when(userRepository.findByIdAndActiveTrueAndRoleName(admin.getId(), RoleName.ADMIN))
-                .thenReturn(Optional.of(admin));
-        when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order));
         when(deliveryAssignmentRepository.existsByOrderId(order.getId())).thenReturn(false);
         when(deliveryAssignmentRepository.findNearestAvailableDeliveryUser(order.getId()))
                 .thenReturn(Optional.of(deliveryUser));
@@ -82,7 +76,7 @@ class DeliveryServiceTest {
         when(deliveryAssignmentRepository.save(any(DeliveryAssignment.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        DeliveryResponse response = deliveryService.assignDelivery(new AssignDeliveryRequest(orderId));
+        DeliveryResponse response = deliveryService.assignAutomatically(order);
 
         ArgumentCaptor<DeliveryAssignment> assignmentCaptor = ArgumentCaptor.forClass(DeliveryAssignment.class);
         verify(deliveryAssignmentRepository).save(assignmentCaptor.capture());
@@ -93,16 +87,10 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void assignDeliveryRejectsCancelledOrder() {
-        UUID orderId = UUID.randomUUID();
-        User admin = adminUser();
+    void assignAutomaticallyRejectsCancelledOrder() {
+        Order order = order(OrderStatus.CANCELLED);
 
-        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(admin.getId());
-        when(userRepository.findByIdAndActiveTrueAndRoleName(admin.getId(), RoleName.ADMIN))
-                .thenReturn(Optional.of(admin));
-        when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order(OrderStatus.CANCELLED)));
-
-        assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
+        assertThatThrownBy(() -> deliveryService.assignAutomatically(order))
                 .isInstanceOf(DeliveryBusinessException.class)
                 .hasMessage("Cancelled orders cannot be assigned");
 
@@ -110,18 +98,12 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void assignDeliveryRejectsOrderThatAlreadyHasAssignment() {
-        UUID orderId = UUID.randomUUID();
-        User admin = adminUser();
+    void assignAutomaticallyRejectsOrderThatAlreadyHasAssignment() {
         Order order = order(OrderStatus.READY_FOR_PICKUP);
 
-        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(admin.getId());
-        when(userRepository.findByIdAndActiveTrueAndRoleName(admin.getId(), RoleName.ADMIN))
-                .thenReturn(Optional.of(admin));
-        when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order));
         when(deliveryAssignmentRepository.existsByOrderId(order.getId())).thenReturn(true);
 
-        assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
+        assertThatThrownBy(() -> deliveryService.assignAutomatically(order))
                 .isInstanceOf(DeliveryBusinessException.class)
                 .hasMessage("Order already has a delivery assignment");
 
@@ -129,17 +111,12 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void assignDeliveryRejectsNonAdminCaller() {
+    void assignDeliveryEndpointIsDisabled() {
         UUID orderId = UUID.randomUUID();
-        User deliveryUser = deliveryUser();
-
-        when(authenticatedUserProvider.getCurrentUserId()).thenReturn(deliveryUser.getId());
-        when(userRepository.findByIdAndActiveTrueAndRoleName(deliveryUser.getId(), RoleName.ADMIN))
-                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
                 .isInstanceOf(sv.edu.uca.delivery.backend.common.exception.BusinessException.class)
-                .hasMessage("Only admins can assign delivery");
+                .hasMessage("Manual delivery assignment is disabled; confirm the order to assign automatically");
 
         verify(orderRepository, never()).findWithLockingById(any());
         verify(deliveryAssignmentRepository, never()).save(any());
@@ -209,16 +186,6 @@ class DeliveryServiceTest {
         user.setFirstName("Ada");
         user.setLastName("Lovelace");
         user.setEmail("ada@example.com");
-        user.setActive(true);
-        return user;
-    }
-
-    private User adminUser() {
-        User user = new User();
-        user.setId(UUID.randomUUID());
-        user.setFirstName("Grace");
-        user.setLastName("Admin");
-        user.setEmail("grace@example.com");
         user.setActive(true);
         return user;
     }

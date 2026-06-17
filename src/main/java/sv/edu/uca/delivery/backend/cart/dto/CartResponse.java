@@ -9,6 +9,13 @@ public record CartResponse(
         UUID restaurantId,
         String restaurantName,
         BigDecimal subtotal,
-        List<CartItemResponse> items
+        List<CartItemResponse> items,
+        BigDecimal estimatedDeliveryFee,
+        Integer estimatedDeliveryMinutes,
+        Boolean peakDemand,
+        BigDecimal distanceKm
 ) {
+    public CartResponse(UUID id, UUID restaurantId, String restaurantName, BigDecimal subtotal, List<CartItemResponse> items) {
+        this(id, restaurantId, restaurantName, subtotal, items, BigDecimal.ZERO, null, false, null);
+    }
 }

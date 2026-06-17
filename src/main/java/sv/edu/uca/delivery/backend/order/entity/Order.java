@@ -71,6 +71,15 @@ public class Order {
     @Column(name = "coupon_id")
     private Long couponId;
 
+    @Column(name = "estimated_delivery_minutes")
+    private Integer estimatedDeliveryMinutes;
+
+    @Column(name = "demand_multiplier", nullable = false)
+    private BigDecimal demandMultiplier = BigDecimal.ONE;
+
+    @Column(name = "distance_km")
+    private BigDecimal distanceKm;
+
     @Column(length = 500)
     private String notes;
 

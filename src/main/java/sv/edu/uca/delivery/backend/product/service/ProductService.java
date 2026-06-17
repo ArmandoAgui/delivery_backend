@@ -26,6 +26,8 @@ public interface ProductService {
 
     List<ProductResponseDTO> findAvailable();
 
+    List<ProductResponseDTO> searchAvailable(String query);
+
     List<ProductResponseDTO> findByCategory(Long CategoryId);
 
 

@@ -3,6 +3,7 @@ package sv.edu.uca.delivery.backend.order.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.ObjectProvider;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import sv.edu.uca.delivery.backend.address.entity.Address;
@@ -14,6 +15,8 @@ import sv.edu.uca.delivery.backend.common.exception.BusinessException;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRedemptionRepository;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRepository;
 import sv.edu.uca.delivery.backend.delivery.repository.DeliveryAssignmentRepository;
+import sv.edu.uca.delivery.backend.delivery.service.DeliveryEstimateService;
+import sv.edu.uca.delivery.backend.delivery.service.DeliveryService;
 import sv.edu.uca.delivery.backend.loyalty.service.LoyaltyService;
 import sv.edu.uca.delivery.backend.order.entity.Order;
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
@@ -66,6 +69,12 @@ class OrderServiceAuthorizationTest {
     private DeliveryAssignmentRepository deliveryAssignmentRepository;
 
     @Mock
+    private DeliveryEstimateService deliveryEstimateService;
+
+    @Mock
+    private ObjectProvider<DeliveryService> deliveryServiceProvider;
+
+    @Mock
     private AuthenticatedUserProvider authenticatedUserProvider;
 
     @Mock
@@ -88,6 +97,8 @@ class OrderServiceAuthorizationTest {
                 couponRedemptionRepository,
                 paymentRepository,
                 deliveryAssignmentRepository,
+                deliveryEstimateService,
+                deliveryServiceProvider,
                 authenticatedUserProvider,
                 orderFactory,
                 loyaltyService

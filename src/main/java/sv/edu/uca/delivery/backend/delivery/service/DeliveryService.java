@@ -78,11 +78,11 @@ public class DeliveryService {
 
     @Transactional
     public DeliveryResponse assignDelivery(AssignDeliveryRequest request) {
-        validateCurrentUserCanAssignDelivery();
+        throw new BusinessException(HttpStatus.FORBIDDEN, "Manual delivery assignment is disabled; confirm the order to assign automatically");
+    }
 
-        Order order = orderRepository.findWithLockingById(request.orderId())
-                .orElseThrow(() -> new DeliveryNotFoundException("Order was not found"));
-
+    @Transactional
+    public DeliveryResponse assignAutomatically(Order order) {
         validateOrderCanBeAssigned(order);
         if (deliveryAssignmentRepository.existsByOrderId(order.getId())) {
             throw new DeliveryBusinessException("Order already has a delivery assignment");
@@ -125,7 +125,7 @@ public class DeliveryService {
                 .orElseThrow(() -> new DeliveryNotFoundException("Delivery assignment was not found"));
 
         if (!assignment.getDeliveryUser().getId().equals(deliveryUserId)) {
-            throw new DeliveryBusinessException("Delivery assignment does not belong to the authenticated delivery user");
+            throw new BusinessException(HttpStatus.FORBIDDEN, "Delivery assignment does not belong to the authenticated delivery user");
         }
 
         validateStatusChange(assignment, request.status());
@@ -149,12 +149,6 @@ public class DeliveryService {
     private void validateDeliveryUser(UUID deliveryUserId) {
         userRepository.findActiveUserByIdAndRole(deliveryUserId, RoleName.DELIVERY)
                 .orElseThrow(() -> new DeliveryBusinessException("Delivery user must exist, be active, and have DELIVERY role"));
-    }
-
-    private void validateCurrentUserCanAssignDelivery() {
-        UUID currentUserId = authenticatedUserProvider.getCurrentUserId();
-        userRepository.findByIdAndActiveTrueAndRoleName(currentUserId, RoleName.ADMIN)
-                .orElseThrow(() -> new BusinessException(HttpStatus.FORBIDDEN, "Only admins can assign delivery"));
     }
 
     private void validateStatusChange(DeliveryAssignment assignment, DeliveryStatus requestedStatus) {

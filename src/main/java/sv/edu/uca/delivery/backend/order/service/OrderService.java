@@ -1,6 +1,7 @@
 package sv.edu.uca.delivery.backend.order.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,8 @@ import sv.edu.uca.delivery.backend.coupon.entity.CouponRedemption;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRedemptionRepository;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRepository;
 import sv.edu.uca.delivery.backend.delivery.repository.DeliveryAssignmentRepository;
+import sv.edu.uca.delivery.backend.delivery.service.DeliveryEstimateService;
+import sv.edu.uca.delivery.backend.delivery.service.DeliveryService;
 import sv.edu.uca.delivery.backend.loyalty.service.LoyaltyService;
 import sv.edu.uca.delivery.backend.order.dto.request.CreateOrderFromCartRequest;
 import sv.edu.uca.delivery.backend.order.dto.response.OrderItemResponse;
@@ -46,8 +49,6 @@ import java.util.UUID;
 public class OrderService {
 
     private static final BigDecimal TAX_RATE = new BigDecimal("0.13");
-    private static final BigDecimal DELIVERY_FEE = new BigDecimal("2.50");
-
     private final OrderRepository orderRepository;
     private final OrderStatusHistoryRepository historyRepository;
     private final CartRepository cartRepository;
@@ -57,6 +58,8 @@ public class OrderService {
     private final CouponRedemptionRepository couponRedemptionRepository;
     private final PaymentRepository paymentRepository;
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
+    private final DeliveryEstimateService deliveryEstimateService;
+    private final ObjectProvider<DeliveryService> deliveryServiceProvider;
     private final AuthenticatedUserProvider authenticatedUserProvider;
     private final OrderFactory orderFactory;
     private final LoyaltyService loyaltyService;
@@ -81,6 +84,11 @@ public class OrderService {
         Coupon coupon = findCoupon(request.couponCode());
         BigDecimal discount = coupon == null ? BigDecimal.ZERO : calculateDiscount(coupon, subtotal);
         BigDecimal tax = subtotal.multiply(TAX_RATE).setScale(2, RoundingMode.HALF_UP);
+        var deliveryEstimate = deliveryEstimateService.estimate(
+                cart.getRestaurant(),
+                address,
+                cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum()
+        );
 
         Order order = orderFactory.fromCart(
                 customer,
@@ -89,7 +97,7 @@ public class OrderService {
                 cart,
                 subtotal,
                 tax,
-                DELIVERY_FEE,
+                deliveryEstimate,
                 tip,
                 discount,
                 coupon == null ? null : coupon.getId(),
@@ -179,7 +187,9 @@ public class OrderService {
         order.setStatus(OrderStatus.CONFIRMED);
         order.setConfirmedAt(LocalDateTime.now());
         addHistory(order, previous, OrderStatus.CONFIRMED, currentUser(), "Restaurant confirmed order");
-        return toResponse(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+        deliveryServiceProvider.getObject().assignAutomatically(saved);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -204,11 +214,19 @@ public class OrderService {
         validateCanView(order);
         Address address = order.getDeliveryAddress();
         String textAddress = address.getStreetAddress() + ", " + address.getCity() + ", " + address.getCountry();
+        var assignment = deliveryAssignmentRepository.findByOrderId(order.getId()).orElse(null);
         return new OrderTrackingResponse(
                 order.getId(),
                 order.getStatus(),
                 order.getRestaurant().getName(),
                 textAddress,
+                assignment == null ? null : assignment.getStatus().name(),
+                assignment == null ? null : assignment.getDeliveryUser().getId(),
+                assignment == null ? null : assignment.getDeliveryUser().getFirstName() + " " + assignment.getDeliveryUser().getLastName(),
+                order.getEstimatedDeliveryMinutes(),
+                order.getDeliveryFee(),
+                order.getDistanceKm(),
+                order.getDemandMultiplier() != null && order.getDemandMultiplier().compareTo(BigDecimal.ONE) > 0,
                 historyRepository.findByOrderIdOrderByChangedAtAsc(order.getId())
                         .stream()
                         .map(this::toHistory)
@@ -322,6 +340,10 @@ public class OrderService {
                 order.getTipAmount(),
                 order.getDiscountAmount(),
                 order.getTotalAmount(),
+                order.getEstimatedDeliveryMinutes(),
+                order.getDemandMultiplier(),
+                order.getDemandMultiplier() != null && order.getDemandMultiplier().compareTo(BigDecimal.ONE) > 0,
+                order.getDistanceKm(),
                 order.getCreatedAt(),
                 order.getItems().stream().map(this::toItem).toList(),
                 historyRepository.findByOrderIdOrderByChangedAtAsc(order.getId()).stream().map(this::toHistory).toList()

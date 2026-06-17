@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sv.edu.uca.delivery.backend.address.repository.AddressRepository;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.cart.dto.AddCartItemRequest;
 import sv.edu.uca.delivery.backend.cart.dto.CartItemResponse;
@@ -15,6 +16,8 @@ import sv.edu.uca.delivery.backend.cart.entity.CartStatus;
 import sv.edu.uca.delivery.backend.cart.repository.CartItemRepository;
 import sv.edu.uca.delivery.backend.cart.repository.CartRepository;
 import sv.edu.uca.delivery.backend.common.exception.BusinessException;
+import sv.edu.uca.delivery.backend.delivery.dto.DeliveryEstimate;
+import sv.edu.uca.delivery.backend.delivery.service.DeliveryEstimateService;
 import sv.edu.uca.delivery.backend.product.entity.Product;
 import sv.edu.uca.delivery.backend.product.repository.ProductRepository;
 import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
@@ -32,6 +35,8 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final AddressRepository addressRepository;
+    private final DeliveryEstimateService deliveryEstimateService;
     private final AuthenticatedUserProvider authenticatedUserProvider;
 
     @Transactional(readOnly = true)
@@ -123,7 +128,21 @@ public class CartService {
         BigDecimal subtotal = items.stream()
                 .map(CartItemResponse::lineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new CartResponse(cart.getId(), cart.getRestaurant().getId(), cart.getRestaurant().getName(), subtotal, items);
+        DeliveryEstimate estimate = deliveryEstimateService.estimateForCart(
+                cart,
+                addressRepository.findByUserIdOrderByDefaultAddressDescCreatedAtDesc(cart.getCustomer().getId()).stream().findFirst()
+        );
+        return new CartResponse(
+                cart.getId(),
+                cart.getRestaurant().getId(),
+                cart.getRestaurant().getName(),
+                subtotal,
+                items,
+                estimate.estimatedDeliveryFee(),
+                estimate.estimatedDeliveryMinutes(),
+                estimate.peakDemand(),
+                estimate.distanceKm()
+        );
     }
 
     private UUID currentCustomerId() {

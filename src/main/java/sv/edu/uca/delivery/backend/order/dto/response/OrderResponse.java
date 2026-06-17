@@ -19,6 +19,10 @@ public record OrderResponse(
         BigDecimal tipAmount,
         BigDecimal discountAmount,
         BigDecimal totalAmount,
+        Integer estimatedDeliveryMinutes,
+        BigDecimal demandMultiplier,
+        Boolean peakDemand,
+        BigDecimal distanceKm,
         LocalDateTime createdAt,
         List<OrderItemResponse> items,
         List<OrderStatusHistoryResponse> statusHistory

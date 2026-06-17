@@ -100,6 +100,12 @@ public class ProductController {
         return PaginationUtils.toPage(productService.findAvailable(), pageable);
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "Buscar productos disponibles", description = "Busca por producto, descripcion, restaurante o categoria.")
+    public List<ProductResponseDTO> search(@RequestParam(name = "q", required = false) String query) {
+        return productService.searchAvailable(query);
+    }
+
 
     @GetMapping("/category/{categoryId}")
     @Operation(summary = "Listar productos por categoria")

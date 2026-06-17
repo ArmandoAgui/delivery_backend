@@ -243,4 +243,16 @@ public class ProductServiceImpl implements ProductService {
                 })
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> searchAvailable(String query) {
+        if (query == null || query.isBlank()) {
+            return findAvailable();
+        }
+        return productRepository.searchAvailable(query.trim())
+                .stream()
+                .map(product -> ProductMapper.toDTO(product, getActivePromotion(product)))
+                .toList();
+    }
 }

@@ -17,11 +17,15 @@ public interface RestaurantService {
 
     RestaurantResponseDTO findById(UUID id);
 
+    List<RestaurantResponseDTO> search(String query);
+
     RestaurantResponseDTO update(UUID id, RestaurantUpdateDTO dto);
 
     void softDelete(UUID id);
 
     List<RestaurantResponseDTO> findOpenRestaurants();
+
+    List<RestaurantResponseDTO> findNearby(double latitude, double longitude, double radiusKm);
 
     List<RestaurantScheduleDTO> findSchedules(UUID restaurantId);
 

@@ -15,6 +15,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    boolean existsByPhone(String phone);
+
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, UUID id);
+
+    boolean existsByPhoneAndIdNot(String phone, UUID id);
+
     @Query("select u from User u join fetch u.role where lower(u.email) = lower(:email)")
     Optional<User> findByEmailWithRole(@Param("email") String email);
 

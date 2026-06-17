@@ -55,8 +55,12 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new BusinessException(HttpStatus.CONFLICT, "Email is already registered");
         }
+        String phone = normalizeOptional(request.getPhone());
+        if (phone != null && userRepository.existsByPhone(phone)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Phone is already registered");
+        }
         User user = new User();
-        apply(user, request);
+        apply(user, request, phone);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(roleRepository.findByName(request.getRole() == null ? RoleName.CUSTOMER : request.getRole())
                 .orElseThrow(() -> new BusinessException(HttpStatus.BAD_REQUEST, "Role does not exist")));
@@ -67,7 +71,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse update(UUID id, UpdateUserRequest request) {
         User user = userRepository.findByIdWithRole(id).orElseThrow(UserNotFoundException::new);
-        apply(user, request);
+        if (userRepository.existsByEmailIgnoreCaseAndIdNot(request.getEmail(), id)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Email is already registered");
+        }
+        String phone = normalizeOptional(request.getPhone());
+        if (phone != null && userRepository.existsByPhoneAndIdNot(phone, id)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Phone is already registered");
+        }
+        apply(user, request, phone);
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
@@ -86,17 +97,24 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    private void apply(User user, RegisterRequest request) {
+    private void apply(User user, RegisterRequest request, String phone) {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setEmail(request.getEmail().toLowerCase());
-        user.setPhone(request.getPhone());
+        user.setPhone(phone);
     }
 
-    private void apply(User user, UpdateUserRequest request) {
+    private void apply(User user, UpdateUserRequest request, String phone) {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setEmail(request.getEmail().toLowerCase());
-        user.setPhone(request.getPhone());
+        user.setPhone(phone);
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

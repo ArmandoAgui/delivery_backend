@@ -107,9 +107,21 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
-        requireOwner(restaurant);
 
         return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RestaurantResponseDTO> search(String query) {
+        if (query == null || query.isBlank()) {
+            return findAll();
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return restaurantRepository.searchActive(query.trim())
+                .stream()
+                .map(restaurant -> RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
+                .toList();
     }
 
     @Override
@@ -148,6 +160,17 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .stream()
                 .filter(restaurant -> isCurrentlyOpen(restaurant.getId(), now))
                 .map(restaurant -> RestaurantMapper.toDTO(restaurant, true))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RestaurantResponseDTO> findNearby(double latitude, double longitude, double radiusKm) {
+        LocalDateTime now = LocalDateTime.now();
+        double safeRadiusMeters = Math.max(0.5, Math.min(radiusKm, 50.0)) * 1000.0;
+        return restaurantRepository.findNearby(latitude, longitude, safeRadiusMeters)
+                .stream()
+                .map(restaurant -> RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
                 .toList();
     }
 
