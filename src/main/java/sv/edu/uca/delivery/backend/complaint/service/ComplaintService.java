@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.complaint.dto.ComplaintResponse;
 import sv.edu.uca.delivery.backend.complaint.dto.CreateComplaintRequest;
+import sv.edu.uca.delivery.backend.complaint.dto.RefundType;
 import sv.edu.uca.delivery.backend.complaint.dto.UpdateComplaintStatusRequest;
 import sv.edu.uca.delivery.backend.complaint.entity.Complaint;
 import sv.edu.uca.delivery.backend.complaint.entity.ComplaintStatus;
@@ -26,6 +27,7 @@ import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -107,11 +109,13 @@ public class ComplaintService {
 
         Optional<Refund> refund = Optional.empty();
         if (request.status() == ComplaintStatus.RESOLVED) {
-            refund = Optional.of(approveSimpleRefund(complaint));
-            complaint.setResolution("Complaint resolved and refund approved");
+            refund = approveRefundIfRequested(complaint, request);
+            complaint.setResolution(resolveAdminNote(request.resolution(), refund.isPresent()
+                    ? "Complaint resolved and refund approved"
+                    : "Complaint resolved without refund"));
         }
         if (request.status() == ComplaintStatus.REJECTED) {
-            complaint.setResolution("Complaint rejected");
+            complaint.setResolution(resolveAdminNote(request.resolution(), "Complaint rejected"));
         }
 
         Complaint savedComplaint = complaintRepository.save(complaint);
@@ -174,7 +178,22 @@ public class ComplaintService {
                 || (currentStatus == ComplaintStatus.IN_PROGRESS && requestedStatus == ComplaintStatus.REJECTED);
     }
 
-    private Refund approveSimpleRefund(Complaint complaint) {
+    private String resolveAdminNote(String requestedResolution, String fallback) {
+        if (requestedResolution == null || requestedResolution.isBlank()) {
+            return fallback;
+        }
+        return requestedResolution.trim();
+    }
+
+    private Optional<Refund> approveRefundIfRequested(Complaint complaint, UpdateComplaintStatusRequest request) {
+        RefundType refundType = request.refundType() == null ? RefundType.TOTAL : request.refundType();
+        if (refundType == RefundType.NONE) {
+            return Optional.empty();
+        }
+        return Optional.of(approveRefund(complaint, refundType, request.refundAmount()));
+    }
+
+    private Refund approveRefund(Complaint complaint, RefundType refundType, BigDecimal requestedAmount) {
         if (refundRepository.existsByComplaintId(complaint.getId())) {
             throw new ComplaintBusinessException("Complaint already has a refund");
         }
@@ -185,14 +204,31 @@ public class ComplaintService {
                 )
                 .orElseThrow(() -> new ComplaintBusinessException("Paid payment was not found for the order"));
 
+        BigDecimal amount = resolveRefundAmount(payment.getAmount(), refundType, requestedAmount);
+
         Refund refund = new Refund();
         refund.setPayment(payment);
         refund.setComplaint(complaint);
         refund.setStatus(RefundStatus.APPROVED);
-        refund.setAmount(payment.getAmount());
-        refund.setReason("Academic simple refund for resolved complaint");
+        refund.setAmount(amount);
+        refund.setReason(refundType == RefundType.TOTAL
+                ? "Total refund approved from admin complaint resolution"
+                : "Partial refund approved from admin complaint resolution");
         refund.setProcessedAt(LocalDateTime.now());
 
         return refundRepository.save(refund);
+    }
+
+    private BigDecimal resolveRefundAmount(BigDecimal paymentAmount, RefundType refundType, BigDecimal requestedAmount) {
+        if (refundType == RefundType.TOTAL) {
+            return paymentAmount;
+        }
+        if (requestedAmount == null) {
+            throw new ComplaintBusinessException("Partial refund amount is required");
+        }
+        if (requestedAmount.compareTo(paymentAmount) > 0) {
+            throw new ComplaintBusinessException("Partial refund cannot exceed paid amount");
+        }
+        return requestedAmount;
     }
 }

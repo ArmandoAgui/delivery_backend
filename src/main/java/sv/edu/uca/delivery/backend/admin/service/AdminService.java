@@ -1,15 +1,16 @@
 package sv.edu.uca.delivery.backend.admin.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.admin.dto.CommissionRequest;
 import sv.edu.uca.delivery.backend.admin.dto.CommissionResponse;
+import sv.edu.uca.delivery.backend.common.exception.BusinessException;
 
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,19 +20,22 @@ public class AdminService {
 
     @Transactional
     public CommissionResponse createCommission(CommissionRequest request) {
+        if (request.endsAt() != null && !request.endsAt().isAfter(request.startsAt())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Commission end date must be after start date");
+        }
         return jdbcTemplate.queryForObject("""
-                        insert into restaurant_commissions (restaurant_id, commission_percentage, starts_at, ends_at)
-                        values (cast(? as uuid), ?, ?, ?)
-                        returning id, restaurant_id, commission_percentage, starts_at, ends_at
+                        insert into platform_commissions (commission_percentage, starts_at, ends_at)
+                        values (?, ?, ?)
+                        returning id, commission_percentage, starts_at, ends_at
                         """,
                 (rs, rowNum) -> new CommissionResponse(
                         rs.getLong("id"),
-                        rs.getObject("restaurant_id", UUID.class),
+                        null,
                         rs.getBigDecimal("commission_percentage"),
                         rs.getTimestamp("starts_at").toLocalDateTime(),
-                        rs.getTimestamp("ends_at") == null ? null : rs.getTimestamp("ends_at").toLocalDateTime()
+                        rs.getTimestamp("ends_at") == null ? null : rs.getTimestamp("ends_at").toLocalDateTime(),
+                        true
                 ),
-                request.restaurantId(),
                 request.commissionPercentage(),
                 Timestamp.valueOf(request.startsAt()),
                 request.endsAt() == null ? null : Timestamp.valueOf(request.endsAt()));
@@ -40,16 +44,17 @@ public class AdminService {
     @Transactional(readOnly = true)
     public List<CommissionResponse> listCommissions() {
         return jdbcTemplate.query("""
-                        select id, restaurant_id, commission_percentage, starts_at, ends_at
-                        from restaurant_commissions
+                        select id, commission_percentage, starts_at, ends_at
+                        from platform_commissions
                         order by starts_at desc
                         """,
                 (rs, rowNum) -> new CommissionResponse(
                         rs.getLong("id"),
-                        rs.getObject("restaurant_id", UUID.class),
+                        null,
                         rs.getBigDecimal("commission_percentage"),
                         rs.getTimestamp("starts_at").toLocalDateTime(),
-                        rs.getTimestamp("ends_at") == null ? null : rs.getTimestamp("ends_at").toLocalDateTime()
+                        rs.getTimestamp("ends_at") == null ? null : rs.getTimestamp("ends_at").toLocalDateTime(),
+                        true
                 ));
     }
 }

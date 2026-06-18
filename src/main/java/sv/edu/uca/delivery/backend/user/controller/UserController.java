@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import sv.edu.uca.delivery.backend.common.exception.BusinessException;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.*;
 import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
@@ -49,14 +50,14 @@ public class UserController {
     @PutMapping("/me")
     @Operation(summary = "Actualizar perfil autenticado", description = "Actualiza nombre, telefono u otros datos editables del usuario autenticado.")
     public UserResponse updateMe(@RequestBody @Valid UpdateUserRequest request) {
-        return userService.update(authenticatedUserProvider.getCurrentUserId(), request);
+        return userService.updateProfile(authenticatedUserProvider.getCurrentUserId(), request);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Crear usuario", description = "Crea un usuario desde administracion o integraciones internas.")
     public UserResponse create(@RequestBody @Valid RegisterRequest request) {
-        return userService.create(request);
+        throw new BusinessException(HttpStatus.FORBIDDEN, "Admin users can only search, activate, or deactivate users");
     }
 
     @GetMapping("/{id}")
@@ -70,7 +71,7 @@ public class UserController {
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar usuario", description = "Actualiza los datos editables de un usuario por identificador.")
     public UserResponse update(@PathVariable UUID id, @RequestBody @Valid UpdateUserRequest request) {
-        return userService.update(id, request);
+        throw new BusinessException(HttpStatus.FORBIDDEN, "Admin users can only search, activate, or deactivate users");
     }
 
     @DeleteMapping("/{id}")
@@ -78,5 +79,11 @@ public class UserController {
     @Operation(summary = "Desactivar usuario", description = "Desactiva logicamente un usuario sin borrar su historial.")
     public void deactivate(@PathVariable UUID id) {
         userService.deactivate(id);
+    }
+
+    @PatchMapping("/{id}/activate")
+    @Operation(summary = "Activar usuario", description = "Reactiva logicamente un usuario desactivado.")
+    public UserResponse activate(@PathVariable UUID id) {
+        return userService.activate(id);
     }
 }

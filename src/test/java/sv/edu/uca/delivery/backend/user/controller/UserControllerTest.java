@@ -45,7 +45,7 @@ class UserControllerTest {
         UserResponse response = response(userId, "cliente.actualizado@example.com", "CUSTOMER");
 
         when(authenticatedUserProvider.getCurrentUserId()).thenReturn(userId);
-        when(userService.update(eq(userId), any())).thenReturn(response);
+        when(userService.updateProfile(eq(userId), any())).thenReturn(response);
 
         mockMvc.perform(put("/api/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -62,7 +62,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value("cliente.actualizado@example.com"))
                 .andExpect(jsonPath("$.role").value("CUSTOMER"));
 
-        verify(userService).update(eq(userId), any());
+        verify(userService).updateProfile(eq(userId), any());
     }
 
     @Test

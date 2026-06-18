@@ -8,8 +8,11 @@ import sv.edu.uca.delivery.backend.common.exception.BusinessException;
 import sv.edu.uca.delivery.backend.coupon.dto.CouponRequest;
 import sv.edu.uca.delivery.backend.coupon.dto.CouponResponse;
 import sv.edu.uca.delivery.backend.coupon.entity.Coupon;
+import sv.edu.uca.delivery.backend.coupon.entity.DiscountType;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRepository;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -41,6 +44,9 @@ public class CouponService {
     @Transactional
     public CouponResponse update(Long id, CouponRequest request) {
         Coupon coupon = find(id);
+        if (couponRepository.existsByCodeIgnoreCaseAndIdNot(request.code(), id)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Coupon code already exists");
+        }
         apply(coupon, request);
         return toResponse(couponRepository.save(coupon));
     }
@@ -48,6 +54,9 @@ public class CouponService {
     @Transactional
     public CouponResponse setActive(Long id, boolean active) {
         Coupon coupon = find(id);
+        if (active && coupon.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Expired coupons cannot be activated");
+        }
         coupon.setActive(active);
         return toResponse(couponRepository.save(coupon));
     }
@@ -60,6 +69,13 @@ public class CouponService {
     private void apply(Coupon coupon, CouponRequest request) {
         if (request.expiresAt().isBefore(request.startsAt())) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Coupon expiration must be after start date");
+        }
+        if (request.discountType() == DiscountType.PERCENTAGE
+                && request.discountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Percentage coupons cannot exceed 100%");
+        }
+        if (request.active() && request.expiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Expired coupons cannot be active");
         }
         coupon.setCode(request.code().trim().toUpperCase());
         coupon.setDescription(request.description());

@@ -9,6 +9,16 @@ public record CommissionResponse(
         UUID restaurantId,
         BigDecimal commissionPercentage,
         LocalDateTime startsAt,
-        LocalDateTime endsAt
+        LocalDateTime endsAt,
+        boolean global
 ) {
+    public CommissionResponse(
+            Long id,
+            UUID restaurantId,
+            BigDecimal commissionPercentage,
+            LocalDateTime startsAt,
+            LocalDateTime endsAt
+    ) {
+        this(id, restaurantId, commissionPercentage, startsAt, endsAt, restaurantId == null);
+    }
 }

@@ -3,6 +3,7 @@ package sv.edu.uca.delivery.backend.user.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -20,4 +21,8 @@ public class UserResponse {
     private String phone;
 
     private String role;
+
+    private boolean active;
+
+    private LocalDateTime createdAt;
 }

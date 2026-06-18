@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.auth.repository.RoleRepository;
 import sv.edu.uca.delivery.backend.common.exception.BusinessException;
+import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.dto.request.RegisterRequest;
 import sv.edu.uca.delivery.backend.user.dto.request.UpdateUserRequest;
 import sv.edu.uca.delivery.backend.user.dto.response.UserResponse;
@@ -29,6 +30,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     @Override
     @Transactional(readOnly = true)
@@ -91,10 +93,28 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public UserResponse updateProfile(UUID id, UpdateUserRequest request) {
+        request.setRole(null);
+        return update(id, request);
+    }
+
+    @Override
+    @Transactional
     public void deactivate(UUID id) {
+        if (authenticatedUserProvider.getCurrentUserId().equals(id)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Admin users cannot deactivate their own account");
+        }
         User user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
         user.setActive(false);
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse activate(UUID id) {
+        User user = userRepository.findByIdWithRole(id).orElseThrow(UserNotFoundException::new);
+        user.setActive(true);
+        return userMapper.toResponse(userRepository.save(user));
     }
 
     private void apply(User user, RegisterRequest request, String phone) {

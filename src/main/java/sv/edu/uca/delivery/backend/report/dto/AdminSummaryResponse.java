@@ -6,6 +6,8 @@ public record AdminSummaryResponse(
         long users,
         long restaurants,
         long orders,
-        BigDecimal revenue
+        BigDecimal revenue,
+        long openComplaints,
+        BigDecimal estimatedCommissions
 ) {
 }
