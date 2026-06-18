@@ -22,6 +22,10 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
 
     List<DeliveryAssignment> findAllByDeliveryUserIdOrderByAssignedAtDesc(UUID deliveryUserId);
 
+    List<DeliveryAssignment> findAllByDeliveryUserIdAndStatusOrderByAssignedAtDesc(UUID deliveryUserId, DeliveryStatus status);
+
+    List<DeliveryAssignment> findAllByDeliveryUserIdAndStatusInOrderByAssignedAtDesc(UUID deliveryUserId, Collection<DeliveryStatus> statuses);
+
     Optional<DeliveryAssignment> findByIdAndDeliveryUserId(UUID id, UUID deliveryUserId);
 
     Optional<DeliveryAssignment> findByOrderId(UUID orderId);
@@ -57,6 +61,35 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
             """, nativeQuery = true)
     Optional<User> findNearestAvailableDeliveryUser(@Param("orderId") UUID orderId);
 
+    @Query(value = """
+            select u.*
+            from users u
+            join roles r on r.id = u.role_id
+            left join delivery_profiles dp on dp.delivery_user_id = u.id
+            join lateral (
+                select dl.location
+                from delivery_locations dl
+                where dl.delivery_user_id = u.id
+                order by dl.recorded_at desc
+                limit 1
+            ) latest_location on true
+            join orders o on o.id = cast(:orderId as uuid)
+            join restaurants restaurant on restaurant.id = o.restaurant_id
+            where u.is_active = true
+              and r.name = 'DELIVERY'
+              and coalesce(dp.is_available, true) = true
+              and not exists (
+                  select 1
+                  from delivery_assignment_rejections dar
+                  where dar.order_id = o.id
+                    and dar.delivery_user_id = u.id
+              )
+            order by ST_Distance(latest_location.location, restaurant.location)
+            limit 1
+            for update of u skip locked
+            """, nativeQuery = true)
+    Optional<User> findNearestCandidateForOrder(@Param("orderId") UUID orderId);
+
     @Query("""
             select u
             from User u
@@ -73,4 +106,24 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
             limit 1
             """)
     Optional<User> findFirstAvailableDeliveryUser(@Param("statuses") Collection<DeliveryStatus> statuses);
+
+    @Query(value = """
+            select u.*
+            from users u
+            join roles r on r.id = u.role_id
+            left join delivery_profiles dp on dp.delivery_user_id = u.id
+            where u.is_active = true
+              and r.name = 'DELIVERY'
+              and coalesce(dp.is_available, true) = true
+              and not exists (
+                  select 1
+                  from delivery_assignment_rejections dar
+                  where dar.order_id = cast(:orderId as uuid)
+                    and dar.delivery_user_id = u.id
+              )
+            order by u.created_at asc
+            limit 1
+            for update of u skip locked
+            """, nativeQuery = true)
+    Optional<User> findFirstCandidateForOrder(@Param("orderId") UUID orderId);
 }

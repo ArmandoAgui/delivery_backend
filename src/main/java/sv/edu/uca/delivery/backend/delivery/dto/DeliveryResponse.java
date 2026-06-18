@@ -3,6 +3,7 @@ package sv.edu.uca.delivery.backend.delivery.dto;
 import sv.edu.uca.delivery.backend.delivery.entity.DeliveryStatus;
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -14,8 +15,13 @@ public record DeliveryResponse(
         DeliveryStatus status,
         OrderStatus orderStatus,
         String restaurantName,
+        String restaurantAddress,
         String deliveryAddress,
         String orderSummary,
+        BigDecimal distanceKm,
+        BigDecimal deliveryFee,
+        BigDecimal tipAmount,
+        BigDecimal totalAmount,
         LocalDateTime assignedAt,
         LocalDateTime pickedUpAt,
         LocalDateTime deliveredAt,
@@ -40,6 +46,11 @@ public record DeliveryResponse(
                 deliveryUserName,
                 status,
                 orderStatus,
+                null,
+                null,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,

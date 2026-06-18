@@ -62,17 +62,13 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void assignAutomaticallyCreatesAssignmentWithNearestAvailableDeliveryUser() {
+    void assignAutomaticallyCreatesOfferedRequestWithNearestAvailableDeliveryUser() {
         User deliveryUser = deliveryUser();
         Order order = order(OrderStatus.READY_FOR_PICKUP);
 
         when(deliveryAssignmentRepository.existsByOrderId(order.getId())).thenReturn(false);
-        when(deliveryAssignmentRepository.findNearestAvailableDeliveryUser(order.getId()))
+        when(deliveryAssignmentRepository.findNearestCandidateForOrder(order.getId()))
                 .thenReturn(Optional.of(deliveryUser));
-        when(userRepository.findActiveUserByIdAndRole(deliveryUser.getId(), RoleName.DELIVERY))
-                .thenReturn(Optional.of(deliveryUser));
-        when(deliveryAssignmentRepository.existsByDeliveryUserIdAndStatusIn(eq(deliveryUser.getId()), any()))
-                .thenReturn(false);
         when(deliveryAssignmentRepository.save(any(DeliveryAssignment.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -82,7 +78,7 @@ class DeliveryServiceTest {
         verify(deliveryAssignmentRepository).save(assignmentCaptor.capture());
         assertThat(assignmentCaptor.getValue().getOrder()).isSameAs(order);
         assertThat(assignmentCaptor.getValue().getDeliveryUser()).isSameAs(deliveryUser);
-        assertThat(response.status()).isEqualTo(DeliveryStatus.ASSIGNED);
+        assertThat(response.status()).isEqualTo(DeliveryStatus.OFFERED);
         assertThat(response.orderId()).isEqualTo(order.getId());
     }
 

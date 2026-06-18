@@ -17,6 +17,11 @@ public class DeliveryMapper {
                 : order.getDeliveryAddress().getStreetAddress() + ", "
                 + order.getDeliveryAddress().getCity() + ", "
                 + order.getDeliveryAddress().getCountry();
+        String restaurantAddress = order.getRestaurant() == null
+                ? null
+                : order.getRestaurant().getStreetAddress() + ", "
+                + order.getRestaurant().getCity() + ", "
+                + order.getRestaurant().getCountry();
         String summary = order.getItems() == null || order.getItems().isEmpty()
                 ? "Order " + order.getId()
                 : order.getItems().stream()
@@ -31,8 +36,13 @@ public class DeliveryMapper {
                 assignment.getStatus(),
                 order.getStatus(),
                 order.getRestaurant() == null ? null : order.getRestaurant().getName(),
+                restaurantAddress,
                 address,
                 summary,
+                order.getDistanceKm(),
+                order.getDeliveryFee(),
+                order.getTipAmount(),
+                order.getTotalAmount(),
                 assignment.getAssignedAt(),
                 assignment.getPickedUpAt(),
                 assignment.getDeliveredAt(),

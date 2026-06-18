@@ -8,6 +8,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Component
 @RequiredArgsConstructor
 public class DevSeedRunner implements ApplicationRunner {
@@ -39,6 +41,8 @@ public class DevSeedRunner implements ApplicationRunner {
         seedUser("018f9000-0000-7000-8000-000000000003", 3, "Restaurante", "Dev", "restaurante.dev@example.com", password);
         seedUser("018f9000-0000-7000-8000-000000000004", 4, "Repartidor", "Dev", "repartidor.dev@example.com", password);
         seedUser("018f0000-0000-7000-8000-000000000003", 4, "Repartidor", "Cercano", "repartidor.cercano.dev@example.com", password);
+        seedDeliveryProfile("018f9000-0000-7000-8000-000000000004", -89.2300, 13.7000);
+        seedDeliveryProfile("018f0000-0000-7000-8000-000000000003", -89.2205, 13.6905);
 
         jdbcTemplate.update("""
                 insert into addresses (id, user_id, label, street_address, city, state, country, postal_code, location, is_default)
@@ -85,5 +89,21 @@ public class DevSeedRunner implements ApplicationRunner {
                     password_hash = excluded.password_hash,
                     is_active = true
                 """, id, roleId, firstName, lastName, email, password);
+    }
+
+    private void seedDeliveryProfile(String deliveryUserId, double longitude, double latitude) {
+        jdbcTemplate.update("""
+                insert into delivery_profiles (delivery_user_id, is_available, updated_at)
+                values (cast(? as uuid), true, now())
+                on conflict (delivery_user_id) do update set is_available = true, updated_at = now()
+                """, deliveryUserId);
+        jdbcTemplate.update("""
+                insert into delivery_locations (id, delivery_user_id, location, recorded_at, created_at)
+                select cast(? as uuid), cast(? as uuid), ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, now(), now()
+                where not exists (
+                    select 1 from delivery_locations
+                    where delivery_user_id = cast(? as uuid)
+                )
+                """, UUID.randomUUID(), deliveryUserId, longitude, latitude, deliveryUserId);
     }
 }
