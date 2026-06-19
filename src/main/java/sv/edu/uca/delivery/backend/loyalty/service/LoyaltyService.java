@@ -19,10 +19,13 @@ import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 
 import java.math.RoundingMode;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
 public class LoyaltyService {
+
+    private static final BigDecimal POINT_CREDIT_VALUE = new BigDecimal("0.01");
 
     private final LoyaltyAccountRepository accountRepository;
     private final LoyaltyTransactionRepository transactionRepository;
@@ -71,6 +74,27 @@ public class LoyaltyService {
         transactionRepository.save(transaction);
     }
 
+    @Transactional
+    public BigDecimal redeemAllForOrder(User customer, Order order, BigDecimal maximumDiscount) {
+        LoyaltyAccount account = getOrCreateAccount(customer.getId());
+        int points = account.getPointsBalance();
+        if (points <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal creditValue = creditForPoints(points);
+        BigDecimal discount = creditValue.min(maximumDiscount.max(BigDecimal.ZERO));
+        account.setPointsBalance(0);
+        LoyaltyTransaction transaction = new LoyaltyTransaction();
+        transaction.setAccount(account);
+        transaction.setOrder(order);
+        transaction.setTransactionType(LoyaltyTransactionType.REDEEMED);
+        transaction.setPoints(-points);
+        transaction.setDescription("All loyalty points redeemed for order credit");
+        accountRepository.save(account);
+        transactionRepository.save(transaction);
+        return discount.setScale(2, RoundingMode.HALF_UP);
+    }
+
     private LoyaltyAccount getOrCreateAccount(java.util.UUID customerId) {
         return accountRepository.findByCustomerId(customerId).orElseGet(() -> {
             User customer = userRepository.findByIdAndActiveTrue(customerId)
@@ -85,6 +109,7 @@ public class LoyaltyService {
         return new LoyaltyResponse(
                 account.getCustomer().getId(),
                 account.getPointsBalance(),
+                creditForPoints(account.getPointsBalance()),
                 transactionRepository.findByAccountCustomerIdOrderByCreatedAtDesc(account.getCustomer().getId())
                         .stream()
                         .map(tx -> new LoyaltyTransactionResponse(
@@ -96,5 +121,9 @@ public class LoyaltyService {
                         ))
                         .toList()
         );
+    }
+
+    private BigDecimal creditForPoints(int points) {
+        return POINT_CREDIT_VALUE.multiply(BigDecimal.valueOf(points)).setScale(2, RoundingMode.HALF_UP);
     }
 }

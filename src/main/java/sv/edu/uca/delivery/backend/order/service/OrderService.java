@@ -82,7 +82,7 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal tip = request.tipAmount() == null ? BigDecimal.ZERO : request.tipAmount();
         Coupon coupon = findCoupon(request.couponCode());
-        BigDecimal discount = coupon == null ? BigDecimal.ZERO : calculateDiscount(coupon, subtotal);
+        BigDecimal couponDiscount = coupon == null ? BigDecimal.ZERO : calculateDiscount(coupon, subtotal);
         BigDecimal tax = subtotal.multiply(TAX_RATE).setScale(2, RoundingMode.HALF_UP);
         var deliveryEstimate = deliveryEstimateService.estimate(
                 cart.getRestaurant(),
@@ -99,7 +99,7 @@ public class OrderService {
                 tax,
                 deliveryEstimate,
                 tip,
-                discount,
+                couponDiscount,
                 coupon == null ? null : coupon.getId(),
                 request.notes()
         );
@@ -115,6 +115,14 @@ public class OrderService {
         });
 
         Order saved = orderRepository.save(order);
+        if (Boolean.TRUE.equals(request.useLoyaltyPoints())) {
+            BigDecimal loyaltyDiscount = loyaltyService.redeemAllForOrder(customer, saved, saved.getTotalAmount());
+            if (loyaltyDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                saved.setDiscountAmount(saved.getDiscountAmount().add(loyaltyDiscount));
+                saved.setTotalAmount(saved.getTotalAmount().subtract(loyaltyDiscount).max(BigDecimal.ZERO));
+                saved = orderRepository.save(saved);
+            }
+        }
         addHistory(saved, null, OrderStatus.CREATED, customer, "Order created from cart");
         if (coupon != null) {
             coupon.setUsedCount(coupon.getUsedCount() + 1);
@@ -122,7 +130,7 @@ public class OrderService {
             redemption.setCoupon(coupon);
             redemption.setOrder(saved);
             redemption.setCustomer(customer);
-            redemption.setDiscountAmount(discount);
+            redemption.setDiscountAmount(couponDiscount);
             couponRedemptionRepository.save(redemption);
         }
         Payment payment = new Payment();

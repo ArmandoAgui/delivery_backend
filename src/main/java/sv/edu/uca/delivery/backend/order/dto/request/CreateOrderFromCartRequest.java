@@ -10,6 +10,7 @@ public record CreateOrderFromCartRequest(
         @NotNull UUID deliveryAddressId,
         @DecimalMin("0.0") BigDecimal tipAmount,
         String couponCode,
-        String notes
+        String notes,
+        Boolean useLoyaltyPoints
 ) {
 }
