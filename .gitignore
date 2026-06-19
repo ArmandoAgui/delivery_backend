@@ -1,5 +1,10 @@
 HELP.md
 .codex
+.env
+.env.*
+!.env.example
+docker.env
+compose.env
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

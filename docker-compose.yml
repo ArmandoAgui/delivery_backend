@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: delivery-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-delivery}
+      POSTGRES_USER: ${POSTGRES_USER:-delivery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-delivery}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - delivery_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-delivery} -d ${POSTGRES_DB:-delivery}"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  backend:
+    build:
+      context: .
+    image: delivery-backend:local
+    container_name: delivery-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-delivery}
+      DB_USER: ${POSTGRES_USER:-delivery}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-delivery}
+      DEV_SEED_ENABLED: ${DEV_SEED_ENABLED:-true}
+      JWT_SECRET: ${JWT_SECRET:-delivery-development-secret-key-change-before-production-0123456789}
+      JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES:-60}
+      JWT_REFRESH_TOKEN_DAYS: ${JWT_REFRESH_TOKEN_DAYS:-14}
+      FLYWAY_BASELINE_ON_MIGRATE: ${FLYWAY_BASELINE_ON_MIGRATE:-false}
+      FLYWAY_BASELINE_VERSION: ${FLYWAY_BASELINE_VERSION:-0}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    build:
+      context: ../delevery_frontend
+    image: delivery-frontend:local
+    container_name: delivery-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8080
+      PORT: 80
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+
+volumes:
+  delivery_postgres_data:

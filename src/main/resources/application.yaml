@@ -1,3 +1,71 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   application:
     name: delivery-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://db.anekdxpxqsirpipjhegn.supabase.co:5432/postgres?sslmode=require}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: DeliveryBackendHikariPool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
+
+  flyway:
+    enabled: true
+    url: ${DB_URL:jdbc:postgresql://db.anekdxpxqsirpipjhegn.supabase.co:5432/postgres?sslmode=require}
+    user: ${DB_USER:postgres}
+    password: ${DB_PASSWORD}
+    locations: classpath:db/migration
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:0}
+    validate-on-migrate: true
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+app:
+  security:
+    dev-user-id: ${DEV_DELIVERY_USER_ID:018f0000-0000-7000-8000-000000000003}
+    jwt-secret: ${JWT_SECRET:delivery-development-secret-key-change-before-production-0123456789}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:60}
+    refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:14}
+  seed:
+    enabled: ${DEV_SEED_ENABLED:false}
+
+server:
+  error:
+    include-stacktrace: never
+    include-message: always
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    urls-primary-name: 00 Todos los endpoints
+    display-request-duration: true
+    doc-expansion: none
+    filter: true
+    try-it-out-enabled: true
+    persist-authorization: true
+    default-models-expand-depth: 1
+    default-model-expand-depth: 2

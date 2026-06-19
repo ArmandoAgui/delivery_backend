@@ -1,0 +1,13 @@
+.git
+.gitignore
+.mvn/wrapper/maven-wrapper.jar
+target
+*.log
+.env
+.env.*
+docker.env
+.idea
+.vscode
+*.iml
+BACKEND_AUDIT_REPORT.md
+ENDPOINT_STATUS_REPORT.md
