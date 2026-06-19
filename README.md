@@ -98,6 +98,49 @@ POSTGRES_PORT=5434
 > Nota: se usa `5434` en el host para no chocar con tu PostgreSQL local actual
 > en `5433`. Dentro de Docker el backend se conecta a `db:5432`.
 
+## Docker Compose En AWS EC2
+
+Para una instancia EC2 de una sola maquina se incluye
+`docker-compose.aws.yml`. Este archivo levanta:
+
+- Nginx publico en el puerto `80`.
+- Frontend React en red interna.
+- Backend Spring Boot en red interna.
+- PostgreSQL/PostGIS persistido en volumen Docker.
+
+Preparar variables:
+
+```bash
+cp deploy/aws.env.example aws.env
+```
+
+Editar `aws.env` y cambiar al menos:
+
+```text
+POSTGRES_PASSWORD=<password-fuerte>
+JWT_SECRET=<secreto-largo-y-privado>
+CORS_ALLOWED_ORIGINS=http://<IP_PUBLICA_EC2>
+```
+
+Levantar el stack desde este repositorio, dejando el frontend como repositorio
+hermano llamado `delivery_frontend`:
+
+```bash
+docker compose --env-file aws.env -f docker-compose.aws.yml up -d --build
+```
+
+Verificar:
+
+```bash
+docker compose --env-file aws.env -f docker-compose.aws.yml ps
+docker compose --env-file aws.env -f docker-compose.aws.yml logs --tail=100
+curl http://localhost/
+curl http://localhost/api/auth/me
+```
+
+En AWS solo debe exponerse publicamente el puerto `80` y mantenerse `22` para
+SSH. PostgreSQL y Spring Boot no se publican al host en este compose.
+
 ### Base De Datos En Render
 
 Para Render, lo recomendado es usar una base PostgreSQL administrada compatible
