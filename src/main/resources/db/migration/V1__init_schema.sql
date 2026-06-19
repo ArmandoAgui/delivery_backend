@@ -1,12 +1,6 @@
 -- V1__init_schema.sql
 -- Initial schema for a food delivery backend.
--- Target database: PostgreSQL 15 with PostGIS.
-
--- ============================================================================
--- Extensions
--- ============================================================================
-
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- Target database: PostgreSQL 15+.
 
 -- ============================================================================
 -- Base Tables
@@ -48,7 +42,6 @@ CREATE TABLE users (
 -- ============================================================================
 
 -- Stores customer addresses and geographic delivery points.
--- GEOGRAPHY(Point, 4326) is used for distance queries in meters.
 CREATE TABLE addresses (
     id BIGSERIAL,
     user_id BIGINT NOT NULL,
@@ -58,13 +51,16 @@ CREATE TABLE addresses (
     state VARCHAR(120),
     country VARCHAR(120) NOT NULL,
     postal_code VARCHAR(30),
-    location GEOGRAPHY(Point, 4326) NOT NULL,
+    latitude NUMERIC(9, 6) NOT NULL,
+    longitude NUMERIC(9, 6) NOT NULL,
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT pk_addresses PRIMARY KEY (id),
     CONSTRAINT fk_addresses_user_id_users FOREIGN KEY (user_id) REFERENCES users (id),
-    CONSTRAINT chk_addresses_label_not_blank CHECK (label IS NULL OR LENGTH(TRIM(label)) > 0)
+    CONSTRAINT chk_addresses_label_not_blank CHECK (label IS NULL OR LENGTH(TRIM(label)) > 0),
+    CONSTRAINT chk_addresses_latitude_range CHECK (latitude BETWEEN -90 AND 90),
+    CONSTRAINT chk_addresses_longitude_range CHECK (longitude BETWEEN -180 AND 180)
 );
 
 -- Stores restaurants managed by users with the RESTAURANT role.
@@ -80,7 +76,8 @@ CREATE TABLE restaurants (
     city VARCHAR(120) NOT NULL,
     state VARCHAR(120),
     country VARCHAR(120) NOT NULL,
-    location GEOGRAPHY(Point, 4326) NOT NULL,
+    latitude NUMERIC(9, 6) NOT NULL,
+    longitude NUMERIC(9, 6) NOT NULL,
     is_open BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -89,7 +86,9 @@ CREATE TABLE restaurants (
     CONSTRAINT fk_restaurants_owner_user_id_users FOREIGN KEY (owner_user_id) REFERENCES users (id),
     CONSTRAINT uk_restaurants_owner_user_id UNIQUE (owner_user_id),
     CONSTRAINT uk_restaurants_name_city UNIQUE (name, city),
-    CONSTRAINT chk_restaurants_email_format CHECK (email IS NULL OR email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$')
+    CONSTRAINT chk_restaurants_email_format CHECK (email IS NULL OR email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$'),
+    CONSTRAINT chk_restaurants_latitude_range CHECK (latitude BETWEEN -90 AND 90),
+    CONSTRAINT chk_restaurants_longitude_range CHECK (longitude BETWEEN -180 AND 180)
 );
 
 -- Stores restaurant product categories such as burgers, drinks, and desserts.
@@ -309,8 +308,8 @@ ON CONFLICT (name) DO NOTHING;
 -- ============================================================================
 
 -- Geospatial indexes for nearby restaurants and delivery address distance queries.
-CREATE INDEX idx_addresses_location_gist ON addresses USING GIST (location);
-CREATE INDEX idx_restaurants_location_gist ON restaurants USING GIST (location);
+CREATE INDEX idx_addresses_latitude_longitude ON addresses (latitude, longitude);
+CREATE INDEX idx_restaurants_latitude_longitude ON restaurants (latitude, longitude);
 
 -- User lookup indexes.
 CREATE INDEX idx_users_role_id ON users (role_id);

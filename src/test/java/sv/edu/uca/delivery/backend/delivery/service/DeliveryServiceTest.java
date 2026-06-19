@@ -62,38 +62,31 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void assignDeliveryCreatesAssignmentWithNearestAvailableDeliveryUser() {
-        UUID orderId = UUID.randomUUID();
+    void assignAutomaticallyCreatesOfferedRequestWithNearestAvailableDeliveryUser() {
         User deliveryUser = deliveryUser();
         Order order = order(OrderStatus.READY_FOR_PICKUP);
 
-        when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order));
         when(deliveryAssignmentRepository.existsByOrderId(order.getId())).thenReturn(false);
-        when(deliveryAssignmentRepository.findNearestAvailableDeliveryUser(order.getId()))
+        when(deliveryAssignmentRepository.findNearestCandidateForOrder(order.getId()))
                 .thenReturn(Optional.of(deliveryUser));
-        when(userRepository.findActiveUserByIdAndRole(deliveryUser.getId(), RoleName.DELIVERY))
-                .thenReturn(Optional.of(deliveryUser));
-        when(deliveryAssignmentRepository.existsByDeliveryUserIdAndStatusIn(eq(deliveryUser.getId()), any()))
-                .thenReturn(false);
         when(deliveryAssignmentRepository.save(any(DeliveryAssignment.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        DeliveryResponse response = deliveryService.assignDelivery(new AssignDeliveryRequest(orderId));
+        DeliveryResponse response = deliveryService.assignAutomatically(order);
 
         ArgumentCaptor<DeliveryAssignment> assignmentCaptor = ArgumentCaptor.forClass(DeliveryAssignment.class);
         verify(deliveryAssignmentRepository).save(assignmentCaptor.capture());
         assertThat(assignmentCaptor.getValue().getOrder()).isSameAs(order);
         assertThat(assignmentCaptor.getValue().getDeliveryUser()).isSameAs(deliveryUser);
-        assertThat(response.status()).isEqualTo(DeliveryStatus.ASSIGNED);
+        assertThat(response.status()).isEqualTo(DeliveryStatus.OFFERED);
         assertThat(response.orderId()).isEqualTo(order.getId());
     }
 
     @Test
-    void assignDeliveryRejectsCancelledOrder() {
-        UUID orderId = UUID.randomUUID();
-        when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order(OrderStatus.CANCELLED)));
+    void assignAutomaticallyRejectsCancelledOrder() {
+        Order order = order(OrderStatus.CANCELLED);
 
-        assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
+        assertThatThrownBy(() -> deliveryService.assignAutomatically(order))
                 .isInstanceOf(DeliveryBusinessException.class)
                 .hasMessage("Cancelled orders cannot be assigned");
 
@@ -101,17 +94,27 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void assignDeliveryRejectsOrderThatAlreadyHasAssignment() {
-        UUID orderId = UUID.randomUUID();
+    void assignAutomaticallyRejectsOrderThatAlreadyHasAssignment() {
         Order order = order(OrderStatus.READY_FOR_PICKUP);
 
-        when(orderRepository.findWithLockingById(orderId)).thenReturn(Optional.of(order));
         when(deliveryAssignmentRepository.existsByOrderId(order.getId())).thenReturn(true);
 
-        assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
+        assertThatThrownBy(() -> deliveryService.assignAutomatically(order))
                 .isInstanceOf(DeliveryBusinessException.class)
                 .hasMessage("Order already has a delivery assignment");
 
+        verify(deliveryAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignDeliveryEndpointIsDisabled() {
+        UUID orderId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> deliveryService.assignDelivery(new AssignDeliveryRequest(orderId)))
+                .isInstanceOf(sv.edu.uca.delivery.backend.common.exception.BusinessException.class)
+                .hasMessage("Manual delivery assignment is disabled; confirm the order to assign automatically");
+
+        verify(orderRepository, never()).findWithLockingById(any());
         verify(deliveryAssignmentRepository, never()).save(any());
     }
 
