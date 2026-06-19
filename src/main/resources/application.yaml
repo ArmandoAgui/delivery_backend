@@ -49,6 +49,17 @@ app:
     refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:14}
   seed:
     enabled: ${DEV_SEED_ENABLED:false}
+  uploads:
+    root-path: ${UPLOADS_ROOT_PATH:uploads}
+    public-path: ${UPLOADS_PUBLIC_PATH:/uploads}
+    max-file-size-bytes: ${UPLOADS_MAX_FILE_SIZE_BYTES:10485760}
+    restaurant-max-width: ${UPLOADS_RESTAURANT_MAX_WIDTH:1280}
+    product-max-width: ${UPLOADS_PRODUCT_MAX_WIDTH:800}
+    quality: ${UPLOADS_IMAGE_QUALITY:0.82}
+  servlet:
+    multipart:
+      max-file-size: ${UPLOADS_MAX_MULTIPART_SIZE:10MB}
+      max-request-size: ${UPLOADS_MAX_MULTIPART_REQUEST_SIZE:10MB}
 
 server:
   error:

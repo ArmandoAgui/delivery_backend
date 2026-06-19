@@ -3,6 +3,7 @@ package sv.edu.uca.delivery.backend.product.service;
 import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
 import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
 import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -17,6 +18,10 @@ public interface ProductService {
     ProductResponseDTO findById(UUID id);
 
     ProductResponseDTO update(UUID id, ProductUpdateDTO dto);
+
+    ProductResponseDTO uploadImage(UUID id, MultipartFile file);
+
+    void deleteImage(UUID id);
 
     void softDelete(UUID id);
 

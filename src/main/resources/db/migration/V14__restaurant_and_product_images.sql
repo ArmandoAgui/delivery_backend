@@ -1,0 +1,5 @@
+ALTER TABLE restaurants
+    ADD COLUMN IF NOT EXISTS image_url VARCHAR(500);
+
+ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS image_url VARCHAR(500);

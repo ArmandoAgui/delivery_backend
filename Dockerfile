@@ -13,7 +13,10 @@ RUN ./mvnw -q -DskipTests package
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 
-RUN addgroup --system delivery && adduser --system --ingroup delivery delivery
+RUN addgroup --system delivery \
+    && adduser --system --ingroup delivery delivery \
+    && mkdir -p /app/uploads \
+    && chown -R delivery:delivery /app/uploads
 
 ENV JAVA_OPTS=""
 ENV SERVER_PORT=8080

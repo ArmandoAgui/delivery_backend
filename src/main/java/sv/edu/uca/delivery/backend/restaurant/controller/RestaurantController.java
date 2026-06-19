@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
 import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
@@ -70,6 +71,22 @@ public class RestaurantController {
             @RequestBody @Valid RestaurantUpdateDTO dto
     ) {
         return restaurantService.update(id, dto);
+    }
+
+    @PostMapping("/{id}/image")
+    @Operation(summary = "Subir o reemplazar imagen del restaurante")
+    public RestaurantResponseDTO uploadImage(
+            @PathVariable UUID id,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return restaurantService.uploadImage(id, file);
+    }
+
+    @DeleteMapping("/{id}/image")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Eliminar imagen del restaurante")
+    public void deleteImage(@PathVariable UUID id) {
+        restaurantService.deleteImage(id);
     }
 
     @PatchMapping("/{id}/deactivate")
