@@ -213,7 +213,7 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
         validateCanView(order);
         Address address = order.getDeliveryAddress();
-        String textAddress = address.getStreetAddress() + ", " + address.getCity() + ", " + address.getCountry();
+        String textAddress = address.getStreetAddress() + ", " + address.getCity() + ", El Salvador";
         var assignment = deliveryAssignmentRepository.findByOrderId(order.getId()).orElse(null);
         return new OrderTrackingResponse(
                 order.getId(),

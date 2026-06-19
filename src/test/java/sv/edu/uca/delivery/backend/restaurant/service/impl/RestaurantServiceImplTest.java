@@ -289,7 +289,6 @@ class RestaurantServiceImplTest {
         request.setStreetAddress("Boulevard Los Proceres");
         request.setCity("San Salvador");
         request.setState("San Salvador");
-        request.setCountry("El Salvador");
         request.setLatitude(13.6929);
         request.setLongitude(-89.2182);
     }
@@ -301,7 +300,6 @@ class RestaurantServiceImplTest {
         request.setStreetAddress("Boulevard Los Proceres");
         request.setCity("San Salvador");
         request.setState("San Salvador");
-        request.setCountry("El Salvador");
         request.setLatitude(13.6929);
         request.setLongitude(-89.2182);
     }

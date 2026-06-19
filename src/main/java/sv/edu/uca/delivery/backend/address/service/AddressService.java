@@ -75,8 +75,6 @@ public class AddressService {
         address.setStreetAddress(request.streetAddress());
         address.setCity(request.city());
         address.setState(request.state());
-        address.setCountry(request.country());
-        address.setPostalCode(request.postalCode());
         address.setDefaultAddress(request.defaultAddress());
         address.setLocation(toLocation(request.latitude(), request.longitude()));
     }
@@ -97,8 +95,6 @@ public class AddressService {
                 address.getStreetAddress(),
                 address.getCity(),
                 address.getState(),
-                address.getCountry(),
-                address.getPostalCode(),
                 location == null ? null : location.getY(),
                 location == null ? null : location.getX(),
                 address.isDefaultAddress()

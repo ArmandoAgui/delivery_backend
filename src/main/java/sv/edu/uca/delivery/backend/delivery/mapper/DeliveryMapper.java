@@ -9,6 +9,8 @@ import sv.edu.uca.delivery.backend.user.entity.User;
 @Component
 public class DeliveryMapper {
 
+    private static final String DEFAULT_COUNTRY = "El Salvador";
+
     public DeliveryResponse toResponse(DeliveryAssignment assignment) {
         User deliveryUser = assignment.getDeliveryUser();
         Order order = assignment.getOrder();
@@ -16,7 +18,7 @@ public class DeliveryMapper {
                 ? null
                 : order.getDeliveryAddress().getStreetAddress() + ", "
                 + order.getDeliveryAddress().getCity() + ", "
-                + order.getDeliveryAddress().getCountry();
+                + DEFAULT_COUNTRY;
         String restaurantAddress = order.getRestaurant() == null
                 ? null
                 : order.getRestaurant().getStreetAddress() + ", "

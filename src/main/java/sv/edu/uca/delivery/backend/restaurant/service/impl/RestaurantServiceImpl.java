@@ -33,6 +33,8 @@ import java.util.UUID;
 @Service
 public class RestaurantServiceImpl implements RestaurantService {
 
+    private static final String DEFAULT_COUNTRY = "El Salvador";
+
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
     private final RestaurantScheduleRepository restaurantScheduleRepository;
@@ -239,7 +241,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setStreetAddress(dto.getStreetAddress());
         restaurant.setCity(dto.getCity());
         restaurant.setState(dto.getState());
-        restaurant.setCountry(dto.getCountry());
+        restaurant.setCountry(DEFAULT_COUNTRY);
         restaurant.setLocation(RestaurantMapper.toLocation(dto.getLatitude(), dto.getLongitude()));
     }
 
@@ -251,7 +253,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setStreetAddress(dto.getStreetAddress());
         restaurant.setCity(dto.getCity());
         restaurant.setState(dto.getState());
-        restaurant.setCountry(dto.getCountry());
+        restaurant.setCountry(DEFAULT_COUNTRY);
         restaurant.setLocation(RestaurantMapper.toLocation(dto.getLatitude(), dto.getLongitude()));
     }
 

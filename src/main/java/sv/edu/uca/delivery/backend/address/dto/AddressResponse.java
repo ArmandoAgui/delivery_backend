@@ -8,8 +8,6 @@ public record AddressResponse(
         String streetAddress,
         String city,
         String state,
-        String country,
-        String postalCode,
         Double latitude,
         Double longitude,
         boolean defaultAddress

@@ -59,7 +59,6 @@ class RestaurantControllerTest {
                                   "streetAddress":"Boulevard Los Proceres",
                                   "city":"San Salvador",
                                   "state":"San Salvador",
-                                  "country":"El Salvador",
                                   "latitude":13.6929,
                                   "longitude":-89.2182,
                                   "open":true
@@ -134,7 +133,6 @@ class RestaurantControllerTest {
                                   "streetAddress":"Boulevard Los Proceres",
                                   "city":"San Salvador",
                                   "state":"San Salvador",
-                                  "country":"El Salvador",
                                   "latitude":13.6929,
                                   "longitude":-89.2182,
                                   "open":true

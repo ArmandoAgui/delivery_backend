@@ -38,9 +38,6 @@ public class RestaurantCreateDTO {
 
     private String state;
 
-    @NotBlank
-    private String country;
-
     @NotNull
     @DecimalMin(value = "-90.0")
     @DecimalMax(value = "90.0")

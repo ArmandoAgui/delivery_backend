@@ -42,12 +42,6 @@ public class Address {
     @Column(length = 120)
     private String state;
 
-    @Column(nullable = false, length = 120)
-    private String country;
-
-    @Column(name = "postal_code", length = 30)
-    private String postalCode;
-
     @Column(nullable = false, columnDefinition = "GEOGRAPHY(Point, 4326)")
     private Point location;
 

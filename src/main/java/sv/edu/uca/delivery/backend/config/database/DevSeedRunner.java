@@ -45,8 +45,8 @@ public class DevSeedRunner implements ApplicationRunner {
         seedDeliveryProfile("018f0000-0000-7000-8000-000000000003", -89.2205, 13.6905);
 
         jdbcTemplate.update("""
-                insert into addresses (id, user_id, label, street_address, city, state, country, postal_code, location, is_default)
-                values (cast(? as uuid), cast(? as uuid), 'Casa', 'Calle Dev 123', 'San Salvador', 'San Salvador', 'El Salvador', '1101',
+                insert into addresses (id, user_id, label, street_address, city, state, location, is_default)
+                values (cast(? as uuid), cast(? as uuid), 'Casa', 'Calle Dev 123', 'San Salvador', 'San Salvador',
                         ST_SetSRID(ST_MakePoint(-89.2182, 13.6929), 4326)::geography, true)
                 on conflict (id) do nothing
                 """, "018f9000-0000-7000-8000-000000000101", "018f9000-0000-7000-8000-000000000002");

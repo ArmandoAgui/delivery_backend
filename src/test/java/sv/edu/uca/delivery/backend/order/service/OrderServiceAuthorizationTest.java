@@ -166,7 +166,6 @@ class OrderServiceAuthorizationTest {
         address.setUser(customer);
         address.setStreetAddress("Calle Principal 123");
         address.setCity("San Salvador");
-        address.setCountry("El Salvador");
 
         Order order = new Order();
         order.setId(UUID.randomUUID());
