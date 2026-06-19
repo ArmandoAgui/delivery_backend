@@ -223,7 +223,23 @@ docker run --rm --name delivery-backend --network host --env-file docker.env del
 
 ### Persistencia De Archivos
 
-Actualmente el backend no escribe archivos de negocio en disco. La persistencia relevante vive en PostgreSQL/PostGIS. Si en el futuro se agregan cargas de imagenes, facturas generadas u otros archivos, esas rutas deberan externalizarse por variable de entorno y montarse como volumen en produccion.
+El backend guarda imagenes optimizadas de restaurantes y productos en disco, no
+en la base de datos. La base solo almacena la ruta relativa, por ejemplo
+`/uploads/products/product-<uuid>.webp`.
+
+Variables relevantes:
+
+```text
+UPLOADS_ROOT_PATH=/app/uploads
+UPLOADS_PUBLIC_PATH=/uploads
+UPLOADS_MAX_FILE_SIZE_BYTES=10485760
+UPLOADS_RESTAURANT_MAX_WIDTH=1280
+UPLOADS_PRODUCT_MAX_WIDTH=800
+UPLOADS_IMAGE_QUALITY=0.82
+```
+
+En Docker Compose se usa el volumen `delivery_uploads` montado en
+`/app/uploads`. No borrar ese volumen si se quieren preservar las imagenes.
 
 ### Preparacion Para Deploy
 

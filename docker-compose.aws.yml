@@ -38,8 +38,11 @@ services:
       FLYWAY_BASELINE_ON_MIGRATE: ${FLYWAY_BASELINE_ON_MIGRATE:-false}
       FLYWAY_BASELINE_VERSION: ${FLYWAY_BASELINE_VERSION:-0}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0}
+      UPLOADS_ROOT_PATH: /app/uploads
     expose:
       - "8080"
+    volumes:
+      - delivery_uploads:/app/uploads
 
   frontend:
     build:
@@ -71,3 +74,4 @@ services:
 
 volumes:
   delivery_postgres_data:
+  delivery_uploads:

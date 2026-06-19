@@ -57,6 +57,9 @@ public class Restaurant {
     @Column(nullable = false, columnDefinition = "GEOGRAPHY(Point, 4326)")
     private Point location;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "is_open", nullable = false)
     private boolean open;
 

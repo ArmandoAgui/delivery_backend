@@ -3,6 +3,8 @@ package sv.edu.uca.delivery.backend.product.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import sv.edu.uca.delivery.backend.media.service.ImageStorageService;
 import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
 import sv.edu.uca.delivery.backend.product.dto.ProductUpdateDTO;
 import sv.edu.uca.delivery.backend.product.dto.response.ProductResponseDTO;
@@ -37,6 +39,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final PromotionRepository promotionRepository;
     private final AccessControlService accessControlService;
+    private final ImageStorageService imageStorageService;
 
     @Override
     @Transactional
@@ -186,6 +189,32 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    public ProductResponseDTO uploadImage(UUID id, MultipartFile file) {
+        Product product = productRepository
+                .findById(id)
+                .orElseThrow(ProductNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(product.getRestaurant());
+
+        product.setImageUrl(imageStorageService.storeProductImage(product.getId(), file, product.getImageUrl()));
+        productRepository.save(product);
+        return ProductMapper.toDTO(product, getActivePromotion(product));
+    }
+
+    @Override
+    @Transactional
+    public void deleteImage(UUID id) {
+        Product product = productRepository
+                .findById(id)
+                .orElseThrow(ProductNotFoundException::new);
+        accessControlService.requireAdminOrRestaurantOwner(product.getRestaurant());
+
+        imageStorageService.delete(product.getImageUrl());
+        product.setImageUrl(null);
+        productRepository.save(product);
+    }
+
+    @Override
+    @Transactional
     public void softDelete(UUID id) {
 
         Product product = productRepository
@@ -195,6 +224,8 @@ public class ProductServiceImpl implements ProductService {
 
         // desactivar disponibilidad
         product.setAvailable(false);
+        imageStorageService.delete(product.getImageUrl());
+        product.setImageUrl(null);
 
         productRepository.save(product);
     }

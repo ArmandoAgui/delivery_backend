@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
+import sv.edu.uca.delivery.backend.media.service.ImageStorageService;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleRequestDTO;
@@ -39,18 +40,21 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final UserRepository userRepository;
     private final RestaurantScheduleRepository restaurantScheduleRepository;
     private final AccessControlService accessControlService;
+    private final ImageStorageService imageStorageService;
 
     @Autowired
     public RestaurantServiceImpl(
             RestaurantRepository restaurantRepository,
             UserRepository userRepository,
             RestaurantScheduleRepository restaurantScheduleRepository,
-            AccessControlService accessControlService
+            AccessControlService accessControlService,
+            ImageStorageService imageStorageService
     ) {
         this.restaurantRepository = restaurantRepository;
         this.userRepository = userRepository;
         this.restaurantScheduleRepository = restaurantScheduleRepository;
         this.accessControlService = accessControlService;
+        this.imageStorageService = imageStorageService;
     }
 
     public RestaurantServiceImpl(
@@ -62,6 +66,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         this.userRepository = userRepository;
         this.restaurantScheduleRepository = restaurantScheduleRepository;
         this.accessControlService = null;
+        this.imageStorageService = null;
     }
 
     @Override
@@ -158,6 +163,33 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     @Transactional
+    public RestaurantResponseDTO uploadImage(UUID id, org.springframework.web.multipart.MultipartFile file) {
+        Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
+                .orElseThrow(RestaurantNotFoundException::new);
+        requireOwner(restaurant);
+        if (imageStorageService == null) {
+            throw new RestaurantNotFoundException();
+        }
+        restaurant.setImageUrl(imageStorageService.storeRestaurantImage(restaurant.getId(), file, restaurant.getImageUrl()));
+        restaurantRepository.save(restaurant);
+        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+    }
+
+    @Override
+    @Transactional
+    public void deleteImage(UUID id) {
+        Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
+                .orElseThrow(RestaurantNotFoundException::new);
+        requireOwner(restaurant);
+        if (imageStorageService != null) {
+            imageStorageService.delete(restaurant.getImageUrl());
+        }
+        restaurant.setImageUrl(null);
+        restaurantRepository.save(restaurant);
+    }
+
+    @Override
+    @Transactional
     public void softDelete(UUID id) {
 
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
@@ -165,6 +197,10 @@ public class RestaurantServiceImpl implements RestaurantService {
         requireOwner(restaurant);
 
         restaurant.setActive(false);
+        if (imageStorageService != null) {
+            imageStorageService.delete(restaurant.getImageUrl());
+        }
+        restaurant.setImageUrl(null);
 
         restaurantRepository.save(restaurant);
     }

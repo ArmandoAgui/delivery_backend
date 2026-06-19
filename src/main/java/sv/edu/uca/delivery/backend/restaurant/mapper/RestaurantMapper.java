@@ -32,6 +32,7 @@ public class RestaurantMapper {
                 .country(restaurant.getCountry())
                 .latitude(location == null ? null : location.getY())
                 .longitude(location == null ? null : location.getX())
+                .imageUrl(restaurant.getImageUrl())
                 .open(open)
                 .active(restaurant.isActive())
                 .createdAt(restaurant.getCreatedAt())

@@ -34,6 +34,8 @@ public class RestaurantResponseDTO {
 
     private Double longitude;
 
+    private String imageUrl;
+
     private boolean open;
 
     private boolean active;

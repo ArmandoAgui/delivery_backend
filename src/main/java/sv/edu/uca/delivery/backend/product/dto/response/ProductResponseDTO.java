@@ -25,6 +25,8 @@ public class ProductResponseDTO {
 
     private String categoryName;
 
+    private String imageUrl;
+
     private boolean available;
 
     private LocalDateTime createdAt;

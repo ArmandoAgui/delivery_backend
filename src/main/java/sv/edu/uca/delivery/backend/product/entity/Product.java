@@ -42,6 +42,9 @@ public class Product {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "is_available", nullable = false)
     private boolean available = true;
 

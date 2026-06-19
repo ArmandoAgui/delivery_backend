@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import java.util.UUID;import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import sv.edu.uca.delivery.backend.common.pagination.PageResponse;
 import sv.edu.uca.delivery.backend.common.pagination.PaginationUtils;
 import sv.edu.uca.delivery.backend.product.dto.ProductCreateDTO;
@@ -62,6 +63,22 @@ public class ProductController {
             @RequestBody @Valid ProductUpdateDTO dto
     ) {
         return productService.update(id, dto);
+    }
+
+    @PostMapping("/{id}/image")
+    @Operation(summary = "Subir o reemplazar imagen del producto")
+    public ProductResponseDTO uploadImage(
+            @PathVariable UUID id,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return productService.uploadImage(id, file);
+    }
+
+    @DeleteMapping("/{id}/image")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Eliminar imagen del producto")
+    public void deleteImage(@PathVariable UUID id) {
+        productService.deleteImage(id);
     }
 
     @PatchMapping("/{id}/deactivate")
