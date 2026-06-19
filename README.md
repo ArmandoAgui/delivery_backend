@@ -33,6 +33,88 @@ Tambien se dejo preparada la estructura de datos para cupones, fidelidad, factur
 
 El backend puede construirse y ejecutarse como una imagen Docker independiente. La imagen no incluye base de datos; esta debe proveerse externamente, por ejemplo desde PostgreSQL/PostGIS local, un servicio administrado o un repositorio futuro de despliegue con Docker Compose, Nginx/Traefik y frontend.
 
+## Docker Compose Local
+
+El repositorio incluye un `docker-compose.yml` para levantar el stack completo en
+desarrollo:
+
+- PostgreSQL 16 con PostGIS.
+- Backend Spring Boot.
+- Frontend React servido por Nginx desde `../delevery_frontend`.
+
+Levantar todo:
+
+```bash
+docker compose up --build
+```
+
+Requiere Docker Compose V2 (`docker compose`). Si tu instalacion solo tiene el
+binario antiguo `docker-compose`, instala el plugin oficial de Compose antes de
+usar este archivo.
+
+Abrir:
+
+```text
+Frontend: http://localhost:5173
+Backend:  http://localhost:8080
+Swagger:  http://localhost:8080/swagger-ui.html
+DB host:  localhost:5434
+```
+
+La base de datos queda persistida en el volumen Docker:
+
+```text
+delivery_postgres_data
+```
+
+Para apagar sin borrar datos:
+
+```bash
+docker compose down
+```
+
+Para borrar tambien la base local dockerizada:
+
+```bash
+docker compose down -v
+```
+
+Si necesitas cambiar puertos o credenciales:
+
+```bash
+cp compose.env.example compose.env
+docker compose --env-file compose.env up --build
+```
+
+Por defecto el compose usa:
+
+```text
+POSTGRES_DB=delivery
+POSTGRES_USER=delivery
+POSTGRES_PASSWORD=delivery
+POSTGRES_PORT=5434
+```
+
+> Nota: se usa `5434` en el host para no chocar con tu PostgreSQL local actual
+> en `5433`. Dentro de Docker el backend se conecta a `db:5432`.
+
+### Base De Datos En Render
+
+Para Render, lo recomendado es usar una base PostgreSQL administrada compatible
+con PostGIS y configurar el backend con variables de entorno:
+
+```text
+DB_URL=jdbc:postgresql://<host-render>:5432/<database>?sslmode=require
+DB_USER=<usuario-render>
+DB_PASSWORD=<password-render>
+DEV_SEED_ENABLED=false
+JWT_SECRET=<secreto-fuerte>
+```
+
+El contenedor de base de datos del `docker-compose.yml` es para desarrollo local.
+En Render no conviene depender de un contenedor PostgreSQL efimero sin volumen
+persistente administrado, porque podrias perder datos al redeploy.
+
 ### Construir Imagen
 
 ```bash
