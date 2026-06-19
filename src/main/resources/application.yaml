@@ -40,6 +40,8 @@ spring:
           time_zone: UTC
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:15173,http://127.0.0.1:15173}
   security:
     dev-user-id: ${DEV_DELIVERY_USER_ID:018f0000-0000-7000-8000-000000000003}
     jwt-secret: ${JWT_SECRET:delivery-development-secret-key-change-before-production-0123456789}

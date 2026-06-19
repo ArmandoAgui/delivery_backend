@@ -109,6 +109,7 @@ DB_USER=<usuario-render>
 DB_PASSWORD=<password-render>
 DEV_SEED_ENABLED=false
 JWT_SECRET=<secreto-fuerte>
+CORS_ALLOWED_ORIGINS=https://<frontend-render>.onrender.com
 ```
 
 El contenedor de base de datos del `docker-compose.yml` es para desarrollo local.
@@ -159,6 +160,7 @@ docker run --rm --name delivery-backend --network host --env-file docker.env del
 | `JWT_SECRET` | Si en produccion | Secreto para firmar JWT. Debe ser fuerte y privado. | `change-this-secret` |
 | `JWT_ACCESS_TOKEN_MINUTES` | No | Minutos de vida del access token. | `60` |
 | `JWT_REFRESH_TOKEN_DAYS` | No | Dias de vida del refresh token. | `14` |
+| `CORS_ALLOWED_ORIGINS` | No | Origenes frontend permitidos separados por coma. | `https://app.example.com,http://localhost:5173` |
 | `DEV_SEED_ENABLED` | No | Activa seed de desarrollo. Usar `false` en produccion. | `false` |
 | `DEV_DELIVERY_USER_ID` | No | Usuario dev de fallback si aplica. | `018f...0003` |
 | `FLYWAY_BASELINE_ON_MIGRATE` | No | Baseline para esquemas existentes. | `false` |
