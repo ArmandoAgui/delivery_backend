@@ -40,7 +40,7 @@ desarrollo:
 
 - PostgreSQL 16 con PostGIS.
 - Backend Spring Boot.
-- Frontend React servido por Nginx desde `../delevery_frontend`.
+- Frontend React servido por Nginx desde `../delivery_frontend`.
 
 Levantar todo:
 
