@@ -16,15 +16,20 @@ import sv.edu.uca.delivery.backend.cart.entity.CartStatus;
 import sv.edu.uca.delivery.backend.cart.repository.CartItemRepository;
 import sv.edu.uca.delivery.backend.cart.repository.CartRepository;
 import sv.edu.uca.delivery.backend.common.exception.BusinessException;
+import sv.edu.uca.delivery.backend.common.time.AppClock;
 import sv.edu.uca.delivery.backend.delivery.dto.DeliveryEstimate;
 import sv.edu.uca.delivery.backend.delivery.service.DeliveryEstimateService;
 import sv.edu.uca.delivery.backend.product.entity.Product;
 import sv.edu.uca.delivery.backend.product.repository.ProductRepository;
+import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
+import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantScheduleRepository;
 import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Service
@@ -36,6 +41,7 @@ public class CartService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
+    private final RestaurantScheduleRepository restaurantScheduleRepository;
     private final DeliveryEstimateService deliveryEstimateService;
     private final AuthenticatedUserProvider authenticatedUserProvider;
 
@@ -56,6 +62,9 @@ public class CartService {
         if (!product.isAvailable()) {
             throw new BusinessException(HttpStatus.CONFLICT, "Product is not available");
         }
+        if (!isRestaurantAcceptingOrders(product.getRestaurant(), AppClock.now())) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Restaurant is currently closed");
+        }
 
         Cart cart = cartRepository
                 .findFirstByCustomerIdAndRestaurantIdAndStatusOrderByCreatedAtDesc(
@@ -65,6 +74,7 @@ public class CartService {
                 )
                 .orElseGet(() -> {
                     cartRepository.findFirstByCustomerIdAndStatusOrderByCreatedAtDesc(customerId, CartStatus.ACTIVE)
+                            .filter(existing -> !existing.getItems().isEmpty())
                             .filter(existing -> !existing.getRestaurant().getId().equals(product.getRestaurant().getId()))
                             .ifPresent(existing -> {
                                 throw new BusinessException(HttpStatus.CONFLICT, "Cart already has products from another restaurant");
@@ -105,7 +115,12 @@ public class CartService {
     public void removeItem(UUID itemId) {
         CartItem item = cartItemRepository.findByIdAndCartCustomerId(itemId, currentCustomerId())
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Cart item not found"));
+        Cart cart = item.getCart();
+        cart.getItems().removeIf(existing -> existing.getId().equals(itemId));
         cartItemRepository.delete(item);
+        if (cart.getItems().isEmpty()) {
+            cartRepository.delete(cart);
+        }
     }
 
     @Transactional
@@ -147,5 +162,19 @@ public class CartService {
 
     private UUID currentCustomerId() {
         return authenticatedUserProvider.getCurrentUserId();
+    }
+
+    private boolean isRestaurantAcceptingOrders(Restaurant restaurant, LocalDateTime now) {
+        if (!restaurant.isOpen()) {
+            return false;
+        }
+        short dayOfWeek = (short) now.getDayOfWeek().getValue();
+        LocalTime currentTime = now.toLocalTime();
+        return restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(restaurant.getId(), dayOfWeek)
+                .filter(schedule -> !schedule.isClosed())
+                .filter(schedule -> schedule.getOpensAt() != null && schedule.getClosesAt() != null)
+                .filter(schedule -> !currentTime.isBefore(schedule.getOpensAt()))
+                .filter(schedule -> currentTime.isBefore(schedule.getClosesAt()))
+                .isPresent();
     }
 }

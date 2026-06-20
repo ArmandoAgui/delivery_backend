@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
+import sv.edu.uca.delivery.backend.common.time.AppClock;
 import sv.edu.uca.delivery.backend.media.service.ImageStorageService;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantCreateDTO;
 import sv.edu.uca.delivery.backend.restaurant.dto.RestaurantScheduleDTO;
@@ -94,13 +95,13 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         restaurantRepository.save(restaurant);
 
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RestaurantResponseDTO> findAll() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = AppClock.now();
 
         return restaurantRepository.findByActiveTrue()
                 .stream()
@@ -120,7 +121,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
         Restaurant restaurant = restaurantRepository.findByOwnerIdAndActiveTrue(current.getId())
                 .orElseThrow(RestaurantNotFoundException::new);
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -130,7 +131,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
 
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -139,7 +140,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         if (query == null || query.isBlank()) {
             return findAll();
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = AppClock.now();
         return restaurantRepository.searchActive(query.trim())
                 .stream()
                 .map(restaurant -> RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
@@ -158,7 +159,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         restaurantRepository.save(restaurant);
 
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -172,7 +173,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
         restaurant.setImageUrl(imageStorageService.storeRestaurantImage(restaurant.getId(), file, restaurant.getImageUrl()));
         restaurantRepository.save(restaurant);
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), LocalDateTime.now()));
+        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -208,7 +209,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Override
     @Transactional(readOnly = true)
     public List<RestaurantResponseDTO> findOpenRestaurants() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = AppClock.now();
 
         return restaurantRepository.findByActiveTrue()
                 .stream()
@@ -220,7 +221,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Override
     @Transactional(readOnly = true)
     public List<RestaurantResponseDTO> findNearby(double latitude, double longitude, double radiusKm) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = AppClock.now();
         double safeRadiusMeters = Math.max(0.5, Math.min(radiusKm, 50.0)) * 1000.0;
         return restaurantRepository.findNearby(latitude, longitude, safeRadiusMeters)
                 .stream()
@@ -263,7 +264,7 @@ public class RestaurantServiceImpl implements RestaurantService {
             restaurantScheduleRepository.save(schedule);
         });
 
-        restaurant.setOpen(isCurrentlyOpen(restaurantId, LocalDateTime.now()));
+        restaurant.setOpen(isCurrentlyOpen(restaurantId, AppClock.now()));
         restaurantRepository.save(restaurant);
 
         return findSchedules(restaurantId);
@@ -310,6 +311,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         return restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(restaurantId, dayOfWeek)
                 .filter(schedule -> !schedule.isClosed())
+                .filter(schedule -> schedule.getOpensAt() != null && schedule.getClosesAt() != null)
                 .filter(schedule -> !currentTime.isBefore(schedule.getOpensAt()))
                 .filter(schedule -> currentTime.isBefore(schedule.getClosesAt()))
                 .isPresent();

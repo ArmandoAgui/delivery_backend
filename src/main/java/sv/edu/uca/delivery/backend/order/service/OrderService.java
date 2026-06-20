@@ -12,6 +12,7 @@ import sv.edu.uca.delivery.backend.cart.entity.Cart;
 import sv.edu.uca.delivery.backend.cart.entity.CartStatus;
 import sv.edu.uca.delivery.backend.cart.repository.CartRepository;
 import sv.edu.uca.delivery.backend.common.exception.BusinessException;
+import sv.edu.uca.delivery.backend.common.time.AppClock;
 import sv.edu.uca.delivery.backend.coupon.entity.Coupon;
 import sv.edu.uca.delivery.backend.coupon.entity.CouponRedemption;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRedemptionRepository;
@@ -78,7 +79,7 @@ public class OrderService {
         if (cart.getItems().isEmpty()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Cart is empty");
         }
-        if (!isRestaurantAcceptingOrders(cart.getRestaurant(), LocalDateTime.now())) {
+        if (!isRestaurantAcceptingOrders(cart.getRestaurant(), AppClock.now())) {
             throw new BusinessException(HttpStatus.CONFLICT, "Restaurant is currently closed");
         }
         Address address = addressRepository.findByIdAndUserId(request.deliveryAddressId(), customerId)
@@ -144,7 +145,7 @@ public class OrderService {
         payment.setOrder(saved);
         payment.setAmount(saved.getTotalAmount());
         payment.setStatus(PaymentStatus.PAID);
-        payment.setPaidAt(LocalDateTime.now());
+        payment.setPaidAt(AppClock.now());
         paymentRepository.save(payment);
         cart.setStatus(CartStatus.CHECKED_OUT);
         cartRepository.save(cart);
@@ -185,7 +186,7 @@ public class OrderService {
         }
         OrderStatus previous = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
-        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledAt(AppClock.now());
         addHistory(order, previous, OrderStatus.CANCELLED, currentUser(), "Order cancelled");
         return toResponse(orderRepository.save(order));
     }
@@ -200,7 +201,7 @@ public class OrderService {
         }
         OrderStatus previous = order.getStatus();
         order.setStatus(OrderStatus.CONFIRMED);
-        order.setConfirmedAt(LocalDateTime.now());
+        order.setConfirmedAt(AppClock.now());
         addHistory(order, previous, OrderStatus.CONFIRMED, currentUser(), "Restaurant confirmed order");
         Order saved = orderRepository.save(order);
         deliveryServiceProvider.getObject().assignAutomatically(saved);
@@ -217,7 +218,7 @@ public class OrderService {
         }
         OrderStatus previous = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
-        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledAt(AppClock.now());
         addHistory(order, previous, OrderStatus.CANCELLED, currentUser(), "Restaurant rejected order");
         return toResponse(orderRepository.save(order));
     }
@@ -262,7 +263,7 @@ public class OrderService {
         }
         Coupon coupon = couponRepository.findByCodeIgnoreCase(code.trim())
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Coupon not found"));
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = AppClock.now();
         if (!coupon.isActive() || now.isBefore(coupon.getStartsAt()) || now.isAfter(coupon.getExpiresAt())) {
             throw new BusinessException(HttpStatus.CONFLICT, "Coupon is not active");
         }
