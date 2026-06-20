@@ -36,7 +36,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout",
-                                "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                                "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/restaurants/my", "/restaurants/my").hasRole("RESTAURANT")
                         .requestMatchers(HttpMethod.GET,
                                 "/restaurants/**", "/api/restaurants/**",
