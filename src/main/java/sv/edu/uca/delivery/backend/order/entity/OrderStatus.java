@@ -1,6 +1,8 @@
 package sv.edu.uca.delivery.backend.order.entity;
 
 public enum OrderStatus {
+    PENDING_PAYMENT,
+    PAID,
     CREATED,
     CONFIRMED,
     PREPARING,

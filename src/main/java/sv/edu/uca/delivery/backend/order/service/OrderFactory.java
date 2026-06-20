@@ -5,6 +5,7 @@ import sv.edu.uca.delivery.backend.address.entity.Address;
 import sv.edu.uca.delivery.backend.cart.entity.Cart;
 import sv.edu.uca.delivery.backend.delivery.dto.DeliveryEstimate;
 import sv.edu.uca.delivery.backend.order.entity.Order;
+import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.user.entity.User;
 
@@ -24,9 +25,11 @@ public class OrderFactory {
             BigDecimal tip,
             BigDecimal discount,
             Long couponId,
-            String notes
+            String notes,
+            OrderStatus status
     ) {
         Order order = new Order();
+        order.setStatus(status);
         order.setCustomer(customer);
         order.setRestaurant(restaurant);
         order.setDeliveryAddress(address);

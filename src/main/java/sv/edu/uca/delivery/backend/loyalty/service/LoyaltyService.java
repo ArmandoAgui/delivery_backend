@@ -95,6 +95,17 @@ public class LoyaltyService {
         return discount.setScale(2, RoundingMode.HALF_UP);
     }
 
+    @Transactional(readOnly = true)
+    public BigDecimal previewRedeemAllForOrder(User customer, BigDecimal maximumDiscount) {
+        LoyaltyAccount account = accountRepository.findByCustomerId(customer.getId()).orElse(null);
+        if (account == null || account.getPointsBalance() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return creditForPoints(account.getPointsBalance())
+                .min(maximumDiscount.max(BigDecimal.ZERO))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
     private LoyaltyAccount getOrCreateAccount(java.util.UUID customerId) {
         return accountRepository.findByCustomerId(customerId).orElseGet(() -> {
             User customer = userRepository.findByIdAndActiveTrue(customerId)
