@@ -13,6 +13,7 @@ import lombok.Setter;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -31,6 +32,9 @@ public class LoyaltyAccount {
 
     @Column(name = "points_balance", nullable = false)
     private Integer pointsBalance = 0;
+
+    @Column(name = "credit_balance", nullable = false)
+    private BigDecimal creditBalance = BigDecimal.ZERO;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

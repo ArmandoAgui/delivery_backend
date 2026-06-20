@@ -131,6 +131,14 @@ public class OrderService {
                 saved = orderRepository.save(saved);
             }
         }
+        if (Boolean.TRUE.equals(request.useDigitalWallet())) {
+            BigDecimal walletDiscount = loyaltyService.applyDigitalCreditForOrder(customer, saved, saved.getTotalAmount());
+            if (walletDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                saved.setDiscountAmount(saved.getDiscountAmount().add(walletDiscount));
+                saved.setTotalAmount(saved.getTotalAmount().subtract(walletDiscount).max(BigDecimal.ZERO));
+                saved = orderRepository.save(saved);
+            }
+        }
         addHistory(saved, null, OrderStatus.CREATED, customer, "Order created from cart");
         if (coupon != null) {
             coupon.setUsedCount(coupon.getUsedCount() + 1);

@@ -43,12 +43,15 @@ public class LoyaltyService {
         if (account.getPointsBalance() < request.points()) {
             throw new BusinessException(HttpStatus.CONFLICT, "Not enough loyalty points");
         }
+        BigDecimal creditAmount = creditForPoints(request.points());
         account.setPointsBalance(account.getPointsBalance() - request.points());
+        account.setCreditBalance(creditBalance(account).add(creditAmount));
         LoyaltyTransaction transaction = new LoyaltyTransaction();
         transaction.setAccount(account);
         transaction.setTransactionType(LoyaltyTransactionType.REDEEMED);
         transaction.setPoints(-request.points());
-        transaction.setDescription("Basic points redemption");
+        transaction.setCreditAmount(creditAmount);
+        transaction.setDescription("Points redeemed into digital wallet credit");
         transactionRepository.save(transaction);
         return toResponse(accountRepository.save(account));
     }
@@ -69,6 +72,7 @@ public class LoyaltyService {
         transaction.setOrder(order);
         transaction.setTransactionType(LoyaltyTransactionType.EARNED);
         transaction.setPoints(points);
+        transaction.setCreditAmount(BigDecimal.ZERO);
         transaction.setDescription("Points earned from delivered order");
         accountRepository.save(account);
         transactionRepository.save(transaction);
@@ -89,10 +93,51 @@ public class LoyaltyService {
         transaction.setOrder(order);
         transaction.setTransactionType(LoyaltyTransactionType.REDEEMED);
         transaction.setPoints(-points);
+        transaction.setCreditAmount(discount);
         transaction.setDescription("All loyalty points redeemed for order credit");
         accountRepository.save(account);
         transactionRepository.save(transaction);
         return discount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    @Transactional
+    public BigDecimal applyDigitalCreditForOrder(User customer, Order order, BigDecimal maximumDiscount) {
+        LoyaltyAccount account = getOrCreateAccount(customer.getId());
+        BigDecimal availableCredit = account.getCreditBalance() == null ? BigDecimal.ZERO : account.getCreditBalance();
+        BigDecimal discount = availableCredit.min(maximumDiscount.max(BigDecimal.ZERO)).setScale(2, RoundingMode.HALF_UP);
+        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        account.setCreditBalance(availableCredit.subtract(discount).setScale(2, RoundingMode.HALF_UP));
+        LoyaltyTransaction transaction = new LoyaltyTransaction();
+        transaction.setAccount(account);
+        transaction.setOrder(order);
+        transaction.setTransactionType(LoyaltyTransactionType.REDEEMED);
+        transaction.setPoints(0);
+        transaction.setCreditAmount(discount.negate());
+        transaction.setDescription("Digital wallet credit applied to order");
+        accountRepository.save(account);
+        transactionRepository.save(transaction);
+        return discount;
+    }
+
+    @Transactional
+    public void creditRefund(User customer, Order order, BigDecimal amount, String reason) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        LoyaltyAccount account = getOrCreateAccount(customer.getId());
+        BigDecimal credit = amount.setScale(2, RoundingMode.HALF_UP);
+        account.setCreditBalance(creditBalance(account).add(credit));
+        LoyaltyTransaction transaction = new LoyaltyTransaction();
+        transaction.setAccount(account);
+        transaction.setOrder(order);
+        transaction.setTransactionType(LoyaltyTransactionType.ADJUSTED);
+        transaction.setPoints(0);
+        transaction.setCreditAmount(credit);
+        transaction.setDescription(reason == null || reason.isBlank() ? "Refund credited to digital wallet" : reason);
+        accountRepository.save(account);
+        transactionRepository.save(transaction);
     }
 
     private LoyaltyAccount getOrCreateAccount(java.util.UUID customerId) {
@@ -110,12 +155,15 @@ public class LoyaltyService {
                 account.getCustomer().getId(),
                 account.getPointsBalance(),
                 creditForPoints(account.getPointsBalance()),
+                creditBalance(account),
+                creditBalance(account).add(creditForPoints(account.getPointsBalance())),
                 transactionRepository.findByAccountCustomerIdOrderByCreatedAtDesc(account.getCustomer().getId())
                         .stream()
                         .map(tx -> new LoyaltyTransactionResponse(
                                 tx.getId(),
                                 tx.getTransactionType(),
                                 tx.getPoints(),
+                                tx.getCreditAmount(),
                                 tx.getDescription(),
                                 tx.getCreatedAt()
                         ))
@@ -125,5 +173,9 @@ public class LoyaltyService {
 
     private BigDecimal creditForPoints(int points) {
         return POINT_CREDIT_VALUE.multiply(BigDecimal.valueOf(points)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal creditBalance(LoyaltyAccount account) {
+        return account.getCreditBalance() == null ? BigDecimal.ZERO : account.getCreditBalance();
     }
 }

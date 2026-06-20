@@ -11,6 +11,7 @@ public record CreateOrderFromCartRequest(
         @DecimalMin("0.0") BigDecimal tipAmount,
         String couponCode,
         String notes,
-        Boolean useLoyaltyPoints
+        Boolean useLoyaltyPoints,
+        Boolean useDigitalWallet
 ) {
 }

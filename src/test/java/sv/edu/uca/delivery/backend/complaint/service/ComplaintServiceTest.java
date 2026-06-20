@@ -19,6 +19,7 @@ import sv.edu.uca.delivery.backend.complaint.exception.ComplaintNotFoundExceptio
 import sv.edu.uca.delivery.backend.complaint.mapper.ComplaintMapper;
 import sv.edu.uca.delivery.backend.complaint.repository.ComplaintRepository;
 import sv.edu.uca.delivery.backend.complaint.repository.RefundRepository;
+import sv.edu.uca.delivery.backend.loyalty.service.LoyaltyService;
 import sv.edu.uca.delivery.backend.order.entity.Order;
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
 import sv.edu.uca.delivery.backend.order.repository.OrderRepository;
@@ -59,6 +60,8 @@ class ComplaintServiceTest {
     private PaymentRepository paymentRepository;
     @Mock
     private AuthenticatedUserProvider authenticatedUserProvider;
+    @Mock
+    private LoyaltyService loyaltyService;
 
     @InjectMocks
     private ComplaintService complaintService;
@@ -72,7 +75,8 @@ class ComplaintServiceTest {
                 userRepository,
                 paymentRepository,
                 new ComplaintMapper(),
-                authenticatedUserProvider
+                authenticatedUserProvider,
+                loyaltyService
         );
     }
 
@@ -202,6 +206,12 @@ class ComplaintServiceTest {
         assertThat(response.refund()).isNotNull();
         assertThat(response.refund().refundRequested()).isTrue();
         assertThat(response.refund().refundStatus()).isEqualTo(RefundStatus.APPROVED);
+        verify(loyaltyService).creditRefund(
+                complaint.getCustomer(),
+                complaint.getOrder(),
+                BigDecimal.valueOf(25),
+                "Total refund credited to digital wallet"
+        );
     }
 
     @Test

@@ -15,6 +15,7 @@ import lombok.Setter;
 import sv.edu.uca.delivery.backend.order.entity.Order;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -41,6 +42,9 @@ public class LoyaltyTransaction {
 
     @Column(nullable = false)
     private Integer points;
+
+    @Column(name = "credit_amount", nullable = false)
+    private BigDecimal creditAmount = BigDecimal.ZERO;
 
     @Column(length = 255)
     private String description;

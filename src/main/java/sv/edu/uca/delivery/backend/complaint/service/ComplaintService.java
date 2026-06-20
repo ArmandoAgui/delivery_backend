@@ -17,6 +17,7 @@ import sv.edu.uca.delivery.backend.complaint.exception.ComplaintNotFoundExceptio
 import sv.edu.uca.delivery.backend.complaint.mapper.ComplaintMapper;
 import sv.edu.uca.delivery.backend.complaint.repository.ComplaintRepository;
 import sv.edu.uca.delivery.backend.complaint.repository.RefundRepository;
+import sv.edu.uca.delivery.backend.loyalty.service.LoyaltyService;
 import sv.edu.uca.delivery.backend.order.entity.Order;
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
 import sv.edu.uca.delivery.backend.order.repository.OrderRepository;
@@ -44,6 +45,7 @@ public class ComplaintService {
     private final PaymentRepository paymentRepository;
     private final ComplaintMapper complaintMapper;
     private final AuthenticatedUserProvider authenticatedUserProvider;
+    private final LoyaltyService loyaltyService;
 
     @Transactional
     public ComplaintResponse createComplaint(CreateComplaintRequest request) {
@@ -216,7 +218,16 @@ public class ComplaintService {
                 : "Partial refund approved from admin complaint resolution");
         refund.setProcessedAt(LocalDateTime.now());
 
-        return refundRepository.save(refund);
+        Refund savedRefund = refundRepository.save(refund);
+        loyaltyService.creditRefund(
+                complaint.getCustomer(),
+                complaint.getOrder(),
+                amount,
+                refundType == RefundType.TOTAL
+                        ? "Total refund credited to digital wallet"
+                        : "Partial refund credited to digital wallet"
+        );
+        return savedRefund;
     }
 
     private BigDecimal resolveRefundAmount(BigDecimal paymentAmount, RefundType refundType, BigDecimal requestedAmount) {

@@ -7,7 +7,9 @@ import java.util.UUID;
 public record LoyaltyResponse(
         UUID customerId,
         Integer pointsBalance,
+        BigDecimal pointsCreditBalance,
         BigDecimal creditBalance,
+        BigDecimal totalAvailableCredit,
         List<LoyaltyTransactionResponse> transactions
 ) {
 }
