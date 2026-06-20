@@ -61,6 +61,7 @@ public class SecurityConfig {
                                 "/promotions/**", "/api/promotions/**").hasAnyRole("ADMIN", "RESTAURANT")
                         .requestMatchers(HttpMethod.POST, "/api/deliveries/assign").hasRole("ADMIN")
                         .requestMatchers("/api/deliveries/**").hasAnyRole("ADMIN", "DELIVERY")
+                        .requestMatchers("/api/payments/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/orders/restaurant/**", "/api/orders/*/confirm", "/api/orders/*/reject")
                                 .hasAnyRole("ADMIN", "RESTAURANT")
                         .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
