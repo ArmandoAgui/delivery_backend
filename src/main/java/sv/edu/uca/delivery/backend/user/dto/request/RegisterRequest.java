@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 
 @Data
 public class RegisterRequest {
@@ -23,4 +24,6 @@ public class RegisterRequest {
     @NotBlank
     @Size(min = 8)
     private String password;
+
+    private RoleName role;
 }
