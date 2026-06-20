@@ -20,4 +20,11 @@ public class UserController {
     ) {
         return userService.findById(id);
     }
+
+    @GetMapping("/me/{id}")
+    public UserResponse getProfile(
+            @PathVariable UUID id
+    ) {
+        return userService.findById(id);
+    }
 }
