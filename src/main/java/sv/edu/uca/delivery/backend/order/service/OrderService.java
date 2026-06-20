@@ -34,6 +34,8 @@ import sv.edu.uca.delivery.backend.order.repository.OrderStatusHistoryRepository
 import sv.edu.uca.delivery.backend.payment.entity.Payment;
 import sv.edu.uca.delivery.backend.payment.entity.PaymentStatus;
 import sv.edu.uca.delivery.backend.payment.repository.PaymentRepository;
+import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
+import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantScheduleRepository;
 import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
@@ -41,6 +43,7 @@ import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -57,6 +60,7 @@ public class OrderService {
     private final CouponRepository couponRepository;
     private final CouponRedemptionRepository couponRedemptionRepository;
     private final PaymentRepository paymentRepository;
+    private final RestaurantScheduleRepository restaurantScheduleRepository;
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final DeliveryEstimateService deliveryEstimateService;
     private final ObjectProvider<DeliveryService> deliveryServiceProvider;
@@ -73,6 +77,9 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.BAD_REQUEST, "Cart is empty"));
         if (cart.getItems().isEmpty()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Cart is empty");
+        }
+        if (!isRestaurantAcceptingOrders(cart.getRestaurant(), LocalDateTime.now())) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Restaurant is currently closed");
         }
         Address address = addressRepository.findByIdAndUserId(request.deliveryAddressId(), customerId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Delivery address not found"));
@@ -277,6 +284,20 @@ public class OrderService {
             discount = discount.min(coupon.getMaxDiscountAmount());
         }
         return discount.min(subtotal);
+    }
+
+    private boolean isRestaurantAcceptingOrders(Restaurant restaurant, LocalDateTime now) {
+        if (!restaurant.isOpen()) {
+            return false;
+        }
+        short dayOfWeek = (short) now.getDayOfWeek().getValue();
+        LocalTime currentTime = now.toLocalTime();
+        return restaurantScheduleRepository.findByRestaurantIdAndDayOfWeek(restaurant.getId(), dayOfWeek)
+                .filter(schedule -> !schedule.isClosed())
+                .filter(schedule -> schedule.getOpensAt() != null && schedule.getClosesAt() != null)
+                .filter(schedule -> !currentTime.isBefore(schedule.getOpensAt()))
+                .filter(schedule -> currentTime.isBefore(schedule.getClosesAt()))
+                .isPresent();
     }
 
     private void addHistory(Order order, OrderStatus previous, OrderStatus next, User user, String notes) {

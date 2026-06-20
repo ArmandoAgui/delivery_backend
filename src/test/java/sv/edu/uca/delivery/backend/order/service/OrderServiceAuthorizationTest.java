@@ -24,6 +24,7 @@ import sv.edu.uca.delivery.backend.order.repository.OrderRepository;
 import sv.edu.uca.delivery.backend.order.repository.OrderStatusHistoryRepository;
 import sv.edu.uca.delivery.backend.payment.repository.PaymentRepository;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
+import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantScheduleRepository;
 import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
@@ -66,6 +67,9 @@ class OrderServiceAuthorizationTest {
     private PaymentRepository paymentRepository;
 
     @Mock
+    private RestaurantScheduleRepository restaurantScheduleRepository;
+
+    @Mock
     private DeliveryAssignmentRepository deliveryAssignmentRepository;
 
     @Mock
@@ -96,6 +100,7 @@ class OrderServiceAuthorizationTest {
                 couponRepository,
                 couponRedemptionRepository,
                 paymentRepository,
+                restaurantScheduleRepository,
                 deliveryAssignmentRepository,
                 deliveryEstimateService,
                 deliveryServiceProvider,
