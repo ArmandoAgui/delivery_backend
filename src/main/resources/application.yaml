@@ -56,11 +56,6 @@ app:
     restaurant-max-width: ${UPLOADS_RESTAURANT_MAX_WIDTH:1280}
     product-max-width: ${UPLOADS_PRODUCT_MAX_WIDTH:800}
     quality: ${UPLOADS_IMAGE_QUALITY:0.82}
-  paypal:
-    enabled: ${PAYPAL_ENABLED:false}
-    client-id: ${PAYPAL_CLIENT_ID:}
-    client-secret: ${PAYPAL_CLIENT_SECRET:}
-    environment: ${PAYPAL_ENVIRONMENT:SANDBOX}
   servlet:
     multipart:
       max-file-size: ${UPLOADS_MAX_MULTIPART_SIZE:10MB}

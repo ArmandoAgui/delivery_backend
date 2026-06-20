@@ -5,7 +5,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -89,5 +92,15 @@ public class OrderController {
     @Operation(summary = "Tracking REST del pedido", description = "Consulta periodica/polling. No usa WebSockets.")
     public OrderTrackingResponse tracking(@PathVariable UUID id) {
         return orderService.tracking(id);
+    }
+
+    @GetMapping("/{id}/invoice")
+    @Operation(summary = "Descargar factura", description = "Genera una factura HTML descargable para pedidos del cliente.")
+    public ResponseEntity<String> invoice(@PathVariable UUID id) {
+        String invoice = orderService.invoiceHtml(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_HTML)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"factura-" + id + ".html\"")
+                .body(invoice);
     }
 }

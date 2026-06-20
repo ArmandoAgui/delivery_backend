@@ -71,60 +71,6 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createFromCart(CreateOrderFromCartRequest request) {
-        Order saved = createOrderFromCartSnapshot(request, OrderStatus.PAID, true);
-        Payment payment = new Payment();
-        payment.setOrder(saved);
-        payment.setProvider("SIMULATED");
-        payment.setAmount(saved.getTotalAmount());
-        payment.setStatus(PaymentStatus.PAID);
-        payment.setPaidAt(AppClock.now());
-        paymentRepository.save(payment);
-        checkoutActiveCart(saved.getCustomer().getId());
-        return toResponse(saved);
-    }
-
-    @Transactional
-    public Order createPendingPaymentOrderFromCart(CreateOrderFromCartRequest request) {
-        return createOrderFromCartSnapshot(request, OrderStatus.PENDING_PAYMENT, false);
-    }
-
-    @Transactional
-    public OrderResponse markPaypalPaymentPaid(Payment payment) {
-        Order order = payment.getOrder();
-        if (payment.getStatus() == PaymentStatus.PAID && order.getStatus() == OrderStatus.PAID) {
-            return toResponse(order);
-        }
-        if (payment.getStatus() == PaymentStatus.PAID) {
-            throw new BusinessException(HttpStatus.CONFLICT, "Payment has already been captured");
-        }
-        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
-            throw new BusinessException(HttpStatus.CONFLICT, "Order is not pending payment");
-        }
-
-        finalizeBenefits(order);
-        OrderStatus previous = order.getStatus();
-        order.setStatus(OrderStatus.PAID);
-        payment.setStatus(PaymentStatus.PAID);
-        payment.setPaidAt(AppClock.now());
-        addHistory(order, previous, OrderStatus.PAID, order.getCustomer(), "PayPal payment captured");
-        checkoutActiveCart(order.getCustomer().getId());
-        paymentRepository.save(payment);
-        return toResponse(orderRepository.save(order));
-    }
-
-    @Transactional
-    public void cancelPendingPaymentOrder(Order order, String reason) {
-        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
-            return;
-        }
-        OrderStatus previous = order.getStatus();
-        order.setStatus(OrderStatus.CANCELLED);
-        order.setCancelledAt(AppClock.now());
-        addHistory(order, previous, OrderStatus.CANCELLED, order.getCustomer(), reason);
-        orderRepository.save(order);
-    }
-
-    private Order createOrderFromCartSnapshot(CreateOrderFromCartRequest request, OrderStatus initialStatus, boolean finalizeBenefits) {
         UUID customerId = authenticatedUserProvider.getCurrentUserId();
         User customer = userRepository.findByIdAndActiveTrueAndRoleName(customerId, RoleName.CUSTOMER)
                 .orElseThrow(() -> new BusinessException(HttpStatus.FORBIDDEN, "Only customers can create orders"));
@@ -151,14 +97,6 @@ public class OrderService {
                 address,
                 cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum()
         );
-        BigDecimal amountBeforeLoyalty = subtotal
-                .add(tax)
-                .add(deliveryEstimate.estimatedDeliveryFee())
-                .add(tip)
-                .subtract(couponDiscount);
-        BigDecimal loyaltyDiscount = Boolean.TRUE.equals(request.useLoyaltyPoints())
-                ? loyaltyService.previewRedeemAllForOrder(customer, amountBeforeLoyalty)
-                : BigDecimal.ZERO;
 
         Order order = orderFactory.fromCart(
                 customer,
@@ -169,10 +107,9 @@ public class OrderService {
                 tax,
                 deliveryEstimate,
                 tip,
-                couponDiscount.add(loyaltyDiscount),
+                couponDiscount,
                 coupon == null ? null : coupon.getId(),
-                request.notes(),
-                initialStatus
+                request.notes()
         );
         cart.getItems().forEach(cartItem -> {
             OrderItem item = new OrderItem();
@@ -186,13 +123,33 @@ public class OrderService {
         });
 
         Order saved = orderRepository.save(order);
-        addHistory(saved, null, initialStatus, customer, initialStatus == OrderStatus.PENDING_PAYMENT
-                ? "Order created pending PayPal payment"
-                : "Order created from cart");
-        if (finalizeBenefits) {
-            finalizeBenefits(saved);
+        if (Boolean.TRUE.equals(request.useLoyaltyPoints())) {
+            BigDecimal loyaltyDiscount = loyaltyService.redeemAllForOrder(customer, saved, saved.getTotalAmount());
+            if (loyaltyDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                saved.setDiscountAmount(saved.getDiscountAmount().add(loyaltyDiscount));
+                saved.setTotalAmount(saved.getTotalAmount().subtract(loyaltyDiscount).max(BigDecimal.ZERO));
+                saved = orderRepository.save(saved);
+            }
         }
-        return orderRepository.save(saved);
+        addHistory(saved, null, OrderStatus.CREATED, customer, "Order created from cart");
+        if (coupon != null) {
+            coupon.setUsedCount(coupon.getUsedCount() + 1);
+            CouponRedemption redemption = new CouponRedemption();
+            redemption.setCoupon(coupon);
+            redemption.setOrder(saved);
+            redemption.setCustomer(customer);
+            redemption.setDiscountAmount(couponDiscount);
+            couponRedemptionRepository.save(redemption);
+        }
+        Payment payment = new Payment();
+        payment.setOrder(saved);
+        payment.setAmount(saved.getTotalAmount());
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(AppClock.now());
+        paymentRepository.save(payment);
+        cart.setStatus(CartStatus.CHECKED_OUT);
+        cartRepository.save(cart);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -224,8 +181,8 @@ public class OrderService {
         Order order = orderRepository.findWithLockingById(id)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
         requireCustomerOwnerOrAdmin(order);
-        if (order.getStatus() != OrderStatus.PENDING_PAYMENT && order.getStatus() != OrderStatus.PAID && order.getStatus() != OrderStatus.CREATED) {
-            throw new BusinessException(HttpStatus.CONFLICT, "Only orders before restaurant confirmation can be cancelled");
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Only created orders can be cancelled");
         }
         OrderStatus previous = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
@@ -239,8 +196,8 @@ public class OrderService {
         Order order = orderRepository.findWithLockingById(id)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
         requireRestaurantOwnerOrAdmin(order);
-        if (order.getStatus() != OrderStatus.PAID && order.getStatus() != OrderStatus.CREATED) {
-            throw new BusinessException(HttpStatus.CONFLICT, "Only paid orders can be confirmed");
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Only created orders can be confirmed");
         }
         OrderStatus previous = order.getStatus();
         order.setStatus(OrderStatus.CONFIRMED);
@@ -256,8 +213,8 @@ public class OrderService {
         Order order = orderRepository.findWithLockingById(id)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
         requireRestaurantOwnerOrAdmin(order);
-        if (order.getStatus() != OrderStatus.PAID && order.getStatus() != OrderStatus.CREATED) {
-            throw new BusinessException(HttpStatus.CONFLICT, "Only paid orders can be rejected");
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Only created orders can be rejected");
         }
         OrderStatus previous = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
@@ -290,6 +247,107 @@ public class OrderService {
                         .stream()
                         .map(this::toHistory)
                         .toList()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public String invoiceHtml(UUID id) {
+        Order order = orderRepository.findDetailById(id)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Order not found"));
+        validateCanView(order);
+        Payment payment = paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(order.getId(), PaymentStatus.PAID)
+                .orElse(null);
+        String invoiceNumber = "FAC-" + order.getCreatedAt().toLocalDate().toString().replace("-", "") + "-" + order.getId().toString().substring(0, 8).toUpperCase();
+        String rows = order.getItems().stream()
+                .map(item -> """
+                        <tr>
+                          <td>%s</td>
+                          <td class="right">%d</td>
+                          <td class="right">$%s</td>
+                          <td class="right">$%s</td>
+                        </tr>
+                        """.formatted(
+                        escape(item.getProductName()),
+                        item.getQuantity(),
+                        item.getUnitPrice(),
+                        item.getLineTotal()
+                ))
+                .reduce("", String::concat);
+        Address address = order.getDeliveryAddress();
+        String deliveryAddress = "%s, %s, El Salvador".formatted(address.getStreetAddress(), address.getCity());
+        return """
+                <!doctype html>
+                <html lang="es">
+                <head>
+                  <meta charset="utf-8">
+                  <title>Factura %s</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; color: #1d2a24; margin: 32px; }
+                    .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #1f7a5a; padding-bottom: 16px; }
+                    h1 { margin: 0; color: #1f7a5a; }
+                    .muted { color: #66756d; }
+                    table { width: 100%%; border-collapse: collapse; margin-top: 24px; }
+                    th, td { padding: 10px; border-bottom: 1px solid #d9e1dc; text-align: left; }
+                    th { background: #eef7f2; }
+                    .right { text-align: right; }
+                    .summary { margin-left: auto; width: min(360px, 100%%); margin-top: 24px; }
+                    .summary div { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #d9e1dc; }
+                    .total { font-size: 1.2rem; font-weight: bold; color: #1f7a5a; }
+                    .box { margin-top: 18px; padding: 14px; background: #fbf7ed; border: 1px solid #eadcc2; border-radius: 12px; }
+                  </style>
+                </head>
+                <body>
+                  <section class="header">
+                    <div>
+                      <h1>Delivery</h1>
+                      <p class="muted">Factura de compra</p>
+                    </div>
+                    <div>
+                      <strong>%s</strong><br>
+                      <span class="muted">Pedido: %s</span><br>
+                      <span class="muted">Fecha: %s</span>
+                    </div>
+                  </section>
+                  <section class="box">
+                    <strong>Restaurante:</strong> %s<br>
+                    <strong>Cliente:</strong> %s %s<br>
+                    <strong>Entrega:</strong> %s<br>
+                    <strong>Pago:</strong> %s %s
+                  </section>
+                  <table>
+                    <thead>
+                      <tr><th>Producto</th><th class="right">Cantidad</th><th class="right">Precio</th><th class="right">Total</th></tr>
+                    </thead>
+                    <tbody>%s</tbody>
+                  </table>
+                  <section class="summary">
+                    <div><span>Subtotal</span><strong>$%s</strong></div>
+                    <div><span>Impuesto</span><strong>$%s</strong></div>
+                    <div><span>Envio</span><strong>$%s</strong></div>
+                    <div><span>Propina</span><strong>$%s</strong></div>
+                    <div><span>Descuento</span><strong>-$%s</strong></div>
+                    <div class="total"><span>Total</span><strong>$%s</strong></div>
+                  </section>
+                </body>
+                </html>
+                """.formatted(
+                invoiceNumber,
+                invoiceNumber,
+                order.getId(),
+                order.getCreatedAt(),
+                escape(order.getRestaurant().getName()),
+                escape(order.getCustomer().getFirstName()),
+                escape(order.getCustomer().getLastName()),
+                escape(deliveryAddress),
+                payment == null ? "SIMULATED" : escape(payment.getProvider()),
+                payment == null ? "pendiente/no registrado" : escape(payment.getStatus().name()),
+                rows,
+                order.getSubtotalAmount(),
+                order.getTaxAmount(),
+                order.getDeliveryFee(),
+                order.getTipAmount(),
+                order.getDiscountAmount(),
+                order.getTotalAmount()
         );
     }
 
@@ -328,35 +386,6 @@ public class OrderService {
             discount = discount.min(coupon.getMaxDiscountAmount());
         }
         return discount.min(subtotal);
-    }
-
-    private void finalizeBenefits(Order order) {
-        BigDecimal couponDiscount = BigDecimal.ZERO;
-        if (order.getCouponId() != null && !couponRedemptionRepository.existsByCouponIdAndOrderId(order.getCouponId(), order.getId())) {
-            Coupon coupon = couponRepository.findById(order.getCouponId())
-                    .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "Coupon not found"));
-            couponDiscount = calculateDiscount(coupon, order.getSubtotalAmount());
-            coupon.setUsedCount(coupon.getUsedCount() + 1);
-            CouponRedemption redemption = new CouponRedemption();
-            redemption.setCoupon(coupon);
-            redemption.setOrder(order);
-            redemption.setCustomer(order.getCustomer());
-            redemption.setDiscountAmount(couponDiscount);
-            couponRedemptionRepository.save(redemption);
-        }
-
-        BigDecimal loyaltyDiscount = order.getDiscountAmount().subtract(couponDiscount).max(BigDecimal.ZERO);
-        if (loyaltyDiscount.compareTo(BigDecimal.ZERO) > 0) {
-            loyaltyService.redeemAllForOrder(order.getCustomer(), order, loyaltyDiscount);
-        }
-    }
-
-    private void checkoutActiveCart(UUID customerId) {
-        cartRepository.findFirstByCustomerIdAndStatusOrderByCreatedAtDesc(customerId, CartStatus.ACTIVE)
-                .ifPresent(cart -> {
-                    cart.setStatus(CartStatus.CHECKED_OUT);
-                    cartRepository.save(cart);
-                });
     }
 
     private boolean isRestaurantAcceptingOrders(Restaurant restaurant, LocalDateTime now) {
@@ -458,5 +487,16 @@ public class OrderService {
 
     private OrderStatusHistoryResponse toHistory(OrderStatusHistory history) {
         return new OrderStatusHistoryResponse(history.getId(), history.getPreviousStatus(), history.getNewStatus(), history.getChangedAt(), history.getNotes());
+    }
+
+    private String escape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }

@@ -39,10 +39,6 @@ services:
       FLYWAY_BASELINE_VERSION: ${FLYWAY_BASELINE_VERSION:-0}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0}
       UPLOADS_ROOT_PATH: /app/uploads
-      PAYPAL_ENABLED: ${PAYPAL_ENABLED:-false}
-      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
-      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
-      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-SANDBOX}
     expose:
       - "8080"
     volumes:
@@ -59,7 +55,6 @@ services:
       context: ../delivery_frontend
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:-}
     image: delivery-frontend:aws
     container_name: delivery-frontend
     restart: unless-stopped

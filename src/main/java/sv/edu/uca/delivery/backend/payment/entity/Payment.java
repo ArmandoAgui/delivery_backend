@@ -40,12 +40,6 @@ public class Payment {
     @Column(name = "provider_transaction_id", length = 150)
     private String providerTransactionId;
 
-    @Column(name = "paypal_order_id", length = 150)
-    private String paypalOrderId;
-
-    @Column(name = "paypal_capture_id", length = 150)
-    private String paypalCaptureId;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private PaymentStatus status = PaymentStatus.PENDING;
