@@ -1,4 +1,4 @@
-package sv.edu.uca.delivery.backend.address.dto.controller;
+package sv.edu.uca.delivery.backend.address.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
