@@ -18,6 +18,10 @@ public class RestaurantMapper {
     }
 
     public static RestaurantResponseDTO toDTO(Restaurant restaurant, boolean open) {
+        return toDTO(restaurant, open, null, 0);
+    }
+
+    public static RestaurantResponseDTO toDTO(Restaurant restaurant, boolean open, Double averageRating, long reviewCount) {
         Point location = restaurant.getLocation();
         return RestaurantResponseDTO.builder()
                 .id(restaurant.getId())
@@ -35,6 +39,8 @@ public class RestaurantMapper {
                 .imageUrl(restaurant.getImageUrl())
                 .open(open)
                 .active(restaurant.isActive())
+                .averageRating(averageRating)
+                .reviewCount(reviewCount)
                 .createdAt(restaurant.getCreatedAt())
                 .build();
     }

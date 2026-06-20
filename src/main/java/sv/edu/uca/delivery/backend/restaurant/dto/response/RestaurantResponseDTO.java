@@ -40,5 +40,9 @@ public class RestaurantResponseDTO {
 
     private boolean active;
 
+    private Double averageRating;
+
+    private long reviewCount;
+
     private LocalDateTime createdAt;
 }

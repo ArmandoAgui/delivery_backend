@@ -65,6 +65,14 @@ public class ReviewService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> byDeliveryUser(UUID deliveryUserId) {
+        return reviewRepository.findByDeliveryUserIdOrderByCreatedAtDesc(deliveryUserId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private ReviewResponse toResponse(Review review) {
         return new ReviewResponse(
                 review.getId(),

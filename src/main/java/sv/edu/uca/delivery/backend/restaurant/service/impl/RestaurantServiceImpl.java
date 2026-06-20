@@ -21,6 +21,7 @@ import sv.edu.uca.delivery.backend.restaurant.mapper.RestaurantMapper;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantRepository;
 import sv.edu.uca.delivery.backend.restaurant.repository.RestaurantScheduleRepository;
 import sv.edu.uca.delivery.backend.restaurant.service.RestaurantService;
+import sv.edu.uca.delivery.backend.review.repository.ReviewRepository;
 import sv.edu.uca.delivery.backend.security.AccessControlService;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
@@ -42,6 +43,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final RestaurantScheduleRepository restaurantScheduleRepository;
     private final AccessControlService accessControlService;
     private final ImageStorageService imageStorageService;
+    private final ReviewRepository reviewRepository;
 
     @Autowired
     public RestaurantServiceImpl(
@@ -49,13 +51,15 @@ public class RestaurantServiceImpl implements RestaurantService {
             UserRepository userRepository,
             RestaurantScheduleRepository restaurantScheduleRepository,
             AccessControlService accessControlService,
-            ImageStorageService imageStorageService
+            ImageStorageService imageStorageService,
+            ReviewRepository reviewRepository
     ) {
         this.restaurantRepository = restaurantRepository;
         this.userRepository = userRepository;
         this.restaurantScheduleRepository = restaurantScheduleRepository;
         this.accessControlService = accessControlService;
         this.imageStorageService = imageStorageService;
+        this.reviewRepository = reviewRepository;
     }
 
     public RestaurantServiceImpl(
@@ -68,6 +72,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         this.restaurantScheduleRepository = restaurantScheduleRepository;
         this.accessControlService = null;
         this.imageStorageService = null;
+        this.reviewRepository = null;
     }
 
     @Override
@@ -95,7 +100,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         restaurantRepository.save(restaurant);
 
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
+        return toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -105,7 +110,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         return restaurantRepository.findByActiveTrue()
                 .stream()
-                .map(restaurant -> RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
+                .map(restaurant -> toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
                 .toList();
     }
 
@@ -121,7 +126,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
         Restaurant restaurant = restaurantRepository.findByOwnerIdAndActiveTrue(current.getId())
                 .orElseThrow(RestaurantNotFoundException::new);
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
+        return toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -131,7 +136,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         Restaurant restaurant = restaurantRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(RestaurantNotFoundException::new);
 
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
+        return toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -143,7 +148,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         LocalDateTime now = AppClock.now();
         return restaurantRepository.searchActive(query.trim())
                 .stream()
-                .map(restaurant -> RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
+                .map(restaurant -> toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
                 .toList();
     }
 
@@ -159,7 +164,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         restaurantRepository.save(restaurant);
 
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
+        return toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -173,7 +178,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
         restaurant.setImageUrl(imageStorageService.storeRestaurantImage(restaurant.getId(), file, restaurant.getImageUrl()));
         restaurantRepository.save(restaurant);
-        return RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
+        return toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), AppClock.now()));
     }
 
     @Override
@@ -214,7 +219,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         return restaurantRepository.findByActiveTrue()
                 .stream()
                 .filter(restaurant -> isCurrentlyOpen(restaurant.getId(), now))
-                .map(restaurant -> RestaurantMapper.toDTO(restaurant, true))
+                .map(restaurant -> toResponse(restaurant, true))
                 .toList();
     }
 
@@ -225,7 +230,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         double safeRadiusMeters = Math.max(0.5, Math.min(radiusKm, 50.0)) * 1000.0;
         return restaurantRepository.findNearby(latitude, longitude, safeRadiusMeters)
                 .stream()
-                .map(restaurant -> RestaurantMapper.toDTO(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
+                .map(restaurant -> toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
                 .toList();
     }
 
@@ -297,6 +302,18 @@ public class RestaurantServiceImpl implements RestaurantService {
     private Restaurant findActiveRestaurant(UUID restaurantId) {
         return restaurantRepository.findByIdAndActiveTrue(restaurantId)
                 .orElseThrow(RestaurantNotFoundException::new);
+    }
+
+    private RestaurantResponseDTO toResponse(Restaurant restaurant, boolean open) {
+        if (reviewRepository == null) {
+            return RestaurantMapper.toDTO(restaurant, open);
+        }
+        return RestaurantMapper.toDTO(
+                restaurant,
+                open,
+                reviewRepository.averageRatingByRestaurantId(restaurant.getId()),
+                reviewRepository.countByRestaurantId(restaurant.getId())
+        );
     }
 
     private void requireOwner(Restaurant restaurant) {

@@ -24,6 +24,7 @@ import sv.edu.uca.delivery.backend.order.entity.Order;
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
 import sv.edu.uca.delivery.backend.order.repository.OrderRepository;
 import sv.edu.uca.delivery.backend.order.service.OrderService;
+import sv.edu.uca.delivery.backend.review.repository.ReviewRepository;
 import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
@@ -56,6 +57,7 @@ public class DeliveryService {
     private final AuthenticatedUserProvider authenticatedUserProvider;
     private final OrderService orderService;
     private final JdbcTemplate jdbcTemplate;
+    private final ReviewRepository reviewRepository;
 
     @Autowired
     public DeliveryService(
@@ -65,7 +67,8 @@ public class DeliveryService {
             DeliveryMapper deliveryMapper,
             AuthenticatedUserProvider authenticatedUserProvider,
             OrderService orderService,
-            JdbcTemplate jdbcTemplate
+            JdbcTemplate jdbcTemplate,
+            ReviewRepository reviewRepository
     ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
@@ -74,6 +77,7 @@ public class DeliveryService {
         this.authenticatedUserProvider = authenticatedUserProvider;
         this.orderService = orderService;
         this.jdbcTemplate = jdbcTemplate;
+        this.reviewRepository = reviewRepository;
     }
 
     public DeliveryService(
@@ -90,6 +94,7 @@ public class DeliveryService {
         this.authenticatedUserProvider = authenticatedUserProvider;
         this.orderService = null;
         this.jdbcTemplate = null;
+        this.reviewRepository = null;
     }
 
     @Transactional
@@ -372,7 +377,16 @@ public class DeliveryService {
                 where u.id = cast(? as uuid)
                 """, rs -> {
                     if (!rs.next()) {
-                        return new DeliveryProfileResponse(deliveryUser.getId(), fullName(deliveryUser), true, null, null, null);
+                        return new DeliveryProfileResponse(
+                                deliveryUser.getId(),
+                                fullName(deliveryUser),
+                                true,
+                                null,
+                                null,
+                                null,
+                                averageRating(deliveryUser.getId()),
+                                reviewCount(deliveryUser.getId())
+                        );
                     }
                     return new DeliveryProfileResponse(
                             deliveryUser.getId(),
@@ -380,9 +394,19 @@ public class DeliveryService {
                             rs.getBoolean("is_available"),
                             (Double) rs.getObject("latitude"),
                             (Double) rs.getObject("longitude"),
-                            rs.getTimestamp("recorded_at") == null ? null : rs.getTimestamp("recorded_at").toLocalDateTime()
+                            rs.getTimestamp("recorded_at") == null ? null : rs.getTimestamp("recorded_at").toLocalDateTime(),
+                            averageRating(deliveryUser.getId()),
+                            reviewCount(deliveryUser.getId())
                     );
                 }, deliveryUser.getId());
+    }
+
+    private Double averageRating(UUID deliveryUserId) {
+        return reviewRepository == null ? null : reviewRepository.averageRatingByDeliveryUserId(deliveryUserId);
+    }
+
+    private long reviewCount(UUID deliveryUserId) {
+        return reviewRepository == null ? 0 : reviewRepository.countByDeliveryUserId(deliveryUserId);
     }
 
     private String fullName(User user) {

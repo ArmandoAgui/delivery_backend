@@ -9,6 +9,8 @@ public record DeliveryProfileResponse(
         boolean available,
         Double latitude,
         Double longitude,
-        LocalDateTime locationRecordedAt
+        LocalDateTime locationRecordedAt,
+        Double averageRating,
+        long reviewCount
 ) {
 }
