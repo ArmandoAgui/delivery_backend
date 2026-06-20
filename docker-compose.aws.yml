@@ -43,6 +43,12 @@ services:
       - "8080"
     volumes:
       - delivery_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/localhost/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   frontend:
     build:
@@ -53,7 +59,8 @@ services:
     container_name: delivery-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       BACKEND_URL: http://backend:8080
       PORT: 80
@@ -65,8 +72,10 @@ services:
     container_name: delivery-nginx
     restart: unless-stopped
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
     ports:
       - "${HTTP_PORT:-80}:80"
     volumes:
