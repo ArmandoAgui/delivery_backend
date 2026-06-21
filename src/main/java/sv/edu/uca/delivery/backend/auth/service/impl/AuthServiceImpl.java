@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import sv.edu.uca.delivery.backend.auth.dto.request.LoginRequest;
 import sv.edu.uca.delivery.backend.auth.dto.response.LoginResponse;
 import sv.edu.uca.delivery.backend.auth.entity.Role;
-import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.auth.exception.InvalidCredentialsException;
 import sv.edu.uca.delivery.backend.auth.repository.RoleRepository;
 import sv.edu.uca.delivery.backend.auth.service.AuthService;
@@ -19,24 +18,35 @@ import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    // Repositorio para acceder a los usuarios registrados
     private final UserRepository userRepository;
+
+    // Repositorio para obtener roles del sistema
     private final RoleRepository roleRepository;
+
+    // Encargado de generar y validar contraseñas cifradas
     private final PasswordEncoder passwordEncoder;
+
+    // Servicio para generar tokens JWT
     private final JwtService jwtService;
 
     @Override
     public void register(RegisterRequest request) {
 
+        // Verifica que el correo no exista previamente
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
         }
 
+
+        // Obtiene el rol CUSTOMER por defecto para nuevos usuarios
         Role role = roleRepository.findByName(
                 request.getRole()
         ).orElseThrow(() ->
                 new RuntimeException("Role not found")
         );
 
+        // Construcción de la entidad User
         User user = new User();
 
         user.setFirstName(
