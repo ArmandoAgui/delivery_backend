@@ -4,6 +4,9 @@ import org.springframework.stereotype.Component;
 import sv.edu.uca.delivery.backend.user.dto.response.UserResponse;
 import sv.edu.uca.delivery.backend.user.entity.User;
 
+/**
+ * Convierte entidades User a DTOs de respuesta.
+ */
 @Component
 public class UserMapper {
 

@@ -13,6 +13,10 @@ import sv.edu.uca.delivery.backend.user.service.UserService;
 
 import java.util.UUID;
 
+/**
+ * Implementación de la lógica de negocio relacionada
+ * con la gestión de usuarios.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
