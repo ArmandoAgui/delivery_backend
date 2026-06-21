@@ -3,6 +3,9 @@ package sv.edu.uca.delivery.backend.address.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+/**
+ * DTO utilizado para registrar una nueva dirección.
+ */
 @Data
 public class CreateAddressRequest {
 

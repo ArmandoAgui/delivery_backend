@@ -5,6 +5,10 @@ import lombok.Data;
 
 import java.util.UUID;
 
+/**
+ * DTO utilizado para retornar información
+ * de una dirección al cliente.
+ */
 @Data
 @Builder
 public class AddressResponse {

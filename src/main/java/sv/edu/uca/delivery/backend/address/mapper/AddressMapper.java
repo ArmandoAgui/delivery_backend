@@ -4,9 +4,16 @@ import org.springframework.stereotype.Component;
 import sv.edu.uca.delivery.backend.address.dto.response.AddressResponse;
 import sv.edu.uca.delivery.backend.address.entity.Address;
 
+/**
+ * Encargado de transformar entidades Address
+ * en objetos de respuesta para la API.
+ */
 @Component
 public class AddressMapper {
 
+    /**
+     * Convierte una entidad Address en AddressResponse.
+     */
     public AddressResponse toResponse(
             Address address
     ) {
