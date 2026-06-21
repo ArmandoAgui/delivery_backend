@@ -13,6 +13,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import sv.edu.uca.delivery.backend.security.filter.JwtAuthenticationFilter;
 import sv.edu.uca.delivery.backend.security.handler.CustomAuthenticationEntryPoint;
 
+/**
+ * Configuración principal de Spring Security.
+ * Define rutas públicas, protegidas y filtros JWT.
+ */
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -36,24 +40,20 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers(
-                                "/api/auth/**"
-                        ).permitAll()
+                        // Rutas públicas de autenticación
+                        .requestMatchers("/api/auth/**").permitAll()
 
-                        .requestMatchers(
-                                "/api/admin/**"
-                        ).hasRole("ADMIN")
+                        // Acceso exclusivo para administradores
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        .requestMatchers(
-                                "/api/restaurants/**"
-                        ).hasRole("RESTAURANT")
+                        // Acceso para restaurante
+                        .requestMatchers("/api/restaurants/**").hasRole("RESTAURANT")
 
-                        .requestMatchers(
-                                "/api/delivery/**"
-                        ).hasRole("DELIVERY")
+                        // Acceso para delivery
+                        .requestMatchers("/api/delivery/**").hasRole("DELIVERY")
 
-                        .anyRequest()
-                        .authenticated()
+                        // Todas las demás rutas requieren autenticación
+                        .anyRequest().authenticated()
                 )
 
                 .exceptionHandling(ex ->
@@ -62,10 +62,7 @@ public class SecurityConfig {
                         )
                 )
 
-                .addFilterBefore(
-                        jwtFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
                 .httpBasic(Customizer.withDefaults())
 

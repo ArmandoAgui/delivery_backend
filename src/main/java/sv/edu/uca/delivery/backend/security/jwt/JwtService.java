@@ -11,6 +11,10 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+/**
+ * Servicio encargado de la generación y validación
+ * de tokens JWT utilizados para la autenticación.
+ */
 @Service
 public class JwtService {
 
@@ -26,6 +30,9 @@ public class JwtService {
         );
     }
 
+    /**
+     * Genera un token JWT para el usuario autenticado.
+     */
     public String generateToken(User user) {
 
         return Jwts.builder()
@@ -41,6 +48,9 @@ public class JwtService {
                 .compact();
     }
 
+    /**
+     * Extrae el correo almacenado en el token.
+     */
     public String extractEmail(String token) {
 
         Claims claims = Jwts.parser()
@@ -52,6 +62,9 @@ public class JwtService {
         return claims.getSubject();
     }
 
+    /**
+     * Verifica que el token sea válido y no esté expirado.
+     */
     public boolean isValid(String token) {
 
         try {

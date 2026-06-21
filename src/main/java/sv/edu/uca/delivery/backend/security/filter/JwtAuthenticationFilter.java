@@ -17,6 +17,10 @@ import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Filtro ejecutado en cada petición para validar
+ * el JWT enviado en el encabezado Authorization.
+ */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -31,8 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authHeader =
-                request.getHeader("Authorization");
+        // Obtiene el encabezado Authorization
+        String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null ||
                 !authHeader.startsWith("Bearer ")) {
@@ -41,8 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token =
-                authHeader.substring(7);
+        String token = authHeader.substring(7);
 
         if (!jwtService.isValid(token)) {
 
@@ -50,8 +53,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String email =
-                jwtService.extractEmail(token);
+        // Extrae el correo almacenado dentro del JWT
+        String email = jwtService.extractEmail(token);
 
         User user = userRepository.findByEmail(email)
                 .orElse(null);
