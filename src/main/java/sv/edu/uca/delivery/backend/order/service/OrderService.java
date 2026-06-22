@@ -262,7 +262,7 @@ public class OrderService {
                 order.getDemandMultiplier() != null && order.getDemandMultiplier().compareTo(BigDecimal.ONE) > 0,
                 payment == null ? null : payment.getStatus(),
                 refundStatus,
-                statusReason(order.getStatus()),
+                statusReason(order.getStatus(), payment == null ? null : payment.getStatus(), refundStatus),
                 historyRepository.findByOrderIdOrderByChangedAtAsc(order.getId())
                         .stream()
                         .map(this::toHistory)
@@ -378,6 +378,24 @@ public class OrderService {
         loyaltyService.awardForDeliveredOrder(order);
     }
 
+    public void markRejectedNoDriverAndRefund(Order order, User deliveryUser) {
+        if (order.getStatus() == OrderStatus.REJECTED) {
+            return;
+        }
+        OrderStatus previous = order.getStatus();
+        order.setStatus(OrderStatus.REJECTED);
+        order.setCancelledAt(AppClock.now());
+        Order saved = orderRepository.save(order);
+        addHistory(
+                saved,
+                previous,
+                OrderStatus.REJECTED,
+                deliveryUser,
+                "All available delivery users rejected the request; simulated card refund was issued"
+        );
+        refundLatestPayment(saved, "Simulated refund to card: no delivery driver accepted the order");
+    }
+
     private Coupon findCoupon(String code) {
         if (code == null || code.isBlank()) {
             return null;
@@ -446,7 +464,10 @@ public class OrderService {
         order.setCancelledAt(AppClock.now());
         Order saved = orderRepository.save(order);
         addHistory(saved, previous, OrderStatus.NO_DRIVER_AVAILABLE, null, "Order cancelled automatically because no delivery driver was available");
+        refundLatestPayment(saved, "Simulated refund: no delivery driver available");
+    }
 
+    private void refundLatestPayment(Order saved, String reason) {
         paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(saved.getId()).ifPresent(payment -> {
             if (payment.getStatus() != PaymentStatus.REFUNDED) {
                 payment.setStatus(PaymentStatus.REFUNDED);
@@ -457,7 +478,7 @@ public class OrderService {
                 refund.setPayment(payment);
                 refund.setStatus(RefundStatus.PROCESSED);
                 refund.setAmount(payment.getAmount());
-                refund.setReason("Simulated refund: no delivery driver available");
+                refund.setReason(reason);
                 refund.setProcessedAt(AppClock.now());
                 refundRepository.save(refund);
             }
@@ -557,14 +578,20 @@ public class OrderService {
                 order.getDistanceKm(),
                 payment == null ? null : payment.getStatus(),
                 refundStatus,
-                statusReason(order.getStatus()),
+                statusReason(order.getStatus(), payment == null ? null : payment.getStatus(), refundStatus),
                 order.getCreatedAt(),
                 order.getItems().stream().map(this::toItem).toList(),
                 historyRepository.findByOrderIdOrderByChangedAtAsc(order.getId()).stream().map(this::toHistory).toList()
         );
     }
 
-    private String statusReason(OrderStatus status) {
+    private String statusReason(OrderStatus status, PaymentStatus paymentStatus, String refundStatus) {
+        if (status == OrderStatus.REJECTED && paymentStatus == PaymentStatus.REFUNDED) {
+            return "Todos los repartidores disponibles rechazaron la solicitud. El pedido fue rechazado y el reembolso será enviado a tu tarjeta de forma simulada.";
+        }
+        if (status == OrderStatus.REJECTED && refundStatus != null) {
+            return "El pedido fue rechazado y el reembolso será enviado a tu tarjeta de forma simulada.";
+        }
         if (status == OrderStatus.NO_DRIVER_AVAILABLE) {
             return "No fue posible encontrar un repartidor. El pedido fue cancelado y el pago fue reembolsado de forma simulada.";
         }

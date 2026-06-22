@@ -193,7 +193,13 @@ public class DeliveryService {
         }
 
         assignment.setStatus(DeliveryStatus.REJECTED);
-        return deliveryMapper.toResponse(deliveryAssignmentRepository.save(assignment));
+        DeliveryAssignment rejectedAssignment = deliveryAssignmentRepository.save(assignment);
+        if (orderService != null) {
+            orderService.markRejectedNoDriverAndRefund(rejectedAssignment.getOrder(), rejectedAssignment.getDeliveryUser());
+        } else {
+            rejectedAssignment.getOrder().setStatus(OrderStatus.REJECTED);
+        }
+        return deliveryMapper.toResponse(rejectedAssignment);
     }
 
     @Transactional
