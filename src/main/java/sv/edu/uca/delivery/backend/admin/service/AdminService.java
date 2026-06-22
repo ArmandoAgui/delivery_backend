@@ -24,19 +24,21 @@ public class AdminService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Commission end date must be after start date");
         }
         return jdbcTemplate.queryForObject("""
-                        insert into platform_commissions (commission_percentage, starts_at, ends_at)
-                        values (?, ?, ?)
-                        returning id, commission_percentage, starts_at, ends_at
+                        insert into platform_commissions (commission_percentage, delivery_commission_percentage, starts_at, ends_at)
+                        values (?, ?, ?, ?)
+                        returning id, commission_percentage, delivery_commission_percentage, starts_at, ends_at
                         """,
                 (rs, rowNum) -> new CommissionResponse(
                         rs.getLong("id"),
                         null,
                         rs.getBigDecimal("commission_percentage"),
+                        rs.getBigDecimal("delivery_commission_percentage"),
                         rs.getTimestamp("starts_at").toLocalDateTime(),
                         rs.getTimestamp("ends_at") == null ? null : rs.getTimestamp("ends_at").toLocalDateTime(),
                         true
                 ),
                 request.commissionPercentage(),
+                request.deliveryCommissionPercentage(),
                 Timestamp.valueOf(request.startsAt()),
                 request.endsAt() == null ? null : Timestamp.valueOf(request.endsAt()));
     }
@@ -44,7 +46,7 @@ public class AdminService {
     @Transactional(readOnly = true)
     public List<CommissionResponse> listCommissions() {
         return jdbcTemplate.query("""
-                        select id, commission_percentage, starts_at, ends_at
+                        select id, commission_percentage, delivery_commission_percentage, starts_at, ends_at
                         from platform_commissions
                         order by starts_at desc
                         """,
@@ -52,6 +54,7 @@ public class AdminService {
                         rs.getLong("id"),
                         null,
                         rs.getBigDecimal("commission_percentage"),
+                        rs.getBigDecimal("delivery_commission_percentage"),
                         rs.getTimestamp("starts_at").toLocalDateTime(),
                         rs.getTimestamp("ends_at") == null ? null : rs.getTimestamp("ends_at").toLocalDateTime(),
                         true

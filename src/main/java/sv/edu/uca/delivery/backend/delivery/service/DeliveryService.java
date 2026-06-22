@@ -260,21 +260,48 @@ public class DeliveryService {
         validateDeliveryUser(deliveryUserId);
         requireJdbc();
         return jdbcTemplate.queryForObject("""
+                with earnings as (
+                    select coalesce(sum(o.delivery_fee), 0) as delivery_fees,
+                           coalesce(sum(o.tip_amount), 0) as tips
+                    from delivery_assignments da
+                    join orders o on o.id = da.order_id
+                    where da.delivery_user_id = cast(? as uuid)
+                      and da.status = 'DELIVERED'
+                ),
+                commission as (
+                    select coalesce(pc.delivery_commission_percentage, 0) as percentage
+                    from platform_commissions pc
+                    where pc.starts_at <= now()
+                      and (pc.ends_at is null or pc.ends_at > now())
+                    order by pc.starts_at desc
+                    limit 1
+                )
                 select
                     (select count(*) from delivery_assignments where delivery_user_id = cast(? as uuid) and status = 'OFFERED') as pending_requests,
                     (select count(*) from delivery_assignments where delivery_user_id = cast(? as uuid) and status in ('ASSIGNED', 'PICKED_UP', 'ON_THE_WAY')) as active_deliveries,
                     (select count(*) from delivery_assignments where delivery_user_id = cast(? as uuid) and status = 'DELIVERED') as completed_deliveries,
                     (select count(*) from delivery_assignment_rejections where delivery_user_id = cast(? as uuid)) as rejected_requests,
-                    coalesce((select sum(o.delivery_fee) from delivery_assignments da join orders o on o.id = da.order_id where da.delivery_user_id = cast(? as uuid) and da.status = 'DELIVERED'), 0) as estimated_delivery_earnings,
-                    coalesce((select sum(o.tip_amount) from delivery_assignments da join orders o on o.id = da.order_id where da.delivery_user_id = cast(? as uuid) and da.status = 'DELIVERED'), 0) as tips_received
+                    earnings.delivery_fees as estimated_delivery_earnings,
+                    earnings.tips as tips_received,
+                    coalesce(commission.percentage, 0) as platform_commission_percentage,
+                    (earnings.delivery_fees + earnings.tips) as gross_earnings,
+                    (earnings.delivery_fees + earnings.tips) * coalesce(commission.percentage, 0) / 100 as platform_commission_amount,
+                    (earnings.delivery_fees + earnings.tips)
+                        - ((earnings.delivery_fees + earnings.tips) * coalesce(commission.percentage, 0) / 100) as net_earnings
+                from earnings
+                left join commission on true
                 """, (rs, rowNum) -> new DeliveryStatsResponse(
                         rs.getLong("pending_requests"),
                         rs.getLong("active_deliveries"),
                         rs.getLong("completed_deliveries"),
                         rs.getLong("rejected_requests"),
                         rs.getBigDecimal("estimated_delivery_earnings"),
-                        rs.getBigDecimal("tips_received")
-                ), deliveryUserId, deliveryUserId, deliveryUserId, deliveryUserId, deliveryUserId, deliveryUserId);
+                        rs.getBigDecimal("tips_received"),
+                        rs.getBigDecimal("platform_commission_percentage"),
+                        rs.getBigDecimal("gross_earnings"),
+                        rs.getBigDecimal("platform_commission_amount"),
+                        rs.getBigDecimal("net_earnings")
+                ), deliveryUserId, deliveryUserId, deliveryUserId, deliveryUserId, deliveryUserId);
     }
 
     private void validateOrderCanBeAssigned(Order order) {

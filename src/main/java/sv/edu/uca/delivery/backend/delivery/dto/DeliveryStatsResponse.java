@@ -8,6 +8,10 @@ public record DeliveryStatsResponse(
         long completedDeliveries,
         long rejectedRequests,
         BigDecimal estimatedDeliveryEarnings,
-        BigDecimal tipsReceived
+        BigDecimal tipsReceived,
+        BigDecimal platformCommissionPercentage,
+        BigDecimal grossEarnings,
+        BigDecimal platformCommissionAmount,
+        BigDecimal netEarnings
 ) {
 }

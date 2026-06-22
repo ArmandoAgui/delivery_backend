@@ -17,10 +17,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class DeliveryEstimateService {
 
-    private static final BigDecimal BASE_FEE = new BigDecimal("1.50");
-    private static final BigDecimal PER_KM_FEE = new BigDecimal("0.65");
+    private static final BigDecimal BASE_FEE = new BigDecimal("1.10");
     private static final BigDecimal FALLBACK_DISTANCE_KM = new BigDecimal("4.00");
-    private static final BigDecimal PEAK_MULTIPLIER = new BigDecimal("1.25");
+    private static final BigDecimal PEAK_MULTIPLIER = new BigDecimal("1.10");
     private static final int BASE_MINUTES = 20;
     private static final int MINUTES_PER_KM = 4;
 
@@ -30,8 +29,7 @@ public class DeliveryEstimateService {
         BigDecimal distanceKm = distanceKm(restaurant, address);
         boolean peak = isPeakDemand();
         BigDecimal multiplier = peak ? PEAK_MULTIPLIER : BigDecimal.ONE;
-        BigDecimal fee = BASE_FEE
-                .add(distanceKm.multiply(PER_KM_FEE))
+        BigDecimal fee = deliveryFeeForDistance(distanceKm)
                 .multiply(multiplier)
                 .setScale(2, RoundingMode.HALF_UP);
         int minutes = BASE_MINUTES
@@ -52,12 +50,38 @@ public class DeliveryEstimateService {
     private DeliveryEstimate fallback(int itemCount, boolean restaurantOpen) {
         boolean peak = isPeakDemand();
         BigDecimal multiplier = peak ? PEAK_MULTIPLIER : BigDecimal.ONE;
-        BigDecimal fee = BASE_FEE
-                .add(FALLBACK_DISTANCE_KM.multiply(PER_KM_FEE))
+        BigDecimal fee = deliveryFeeForDistance(FALLBACK_DISTANCE_KM)
                 .multiply(multiplier)
                 .setScale(2, RoundingMode.HALF_UP);
         int minutes = BASE_MINUTES + 16 + Math.max(0, itemCount - 1) * 2 + (restaurantOpen ? 0 : 10) + (peak ? 8 : 0);
         return new DeliveryEstimate(fee, minutes, peak, FALLBACK_DISTANCE_KM, multiplier);
+    }
+
+    private BigDecimal deliveryFeeForDistance(BigDecimal distanceKm) {
+        BigDecimal remaining = distanceKm.max(BigDecimal.ZERO);
+        BigDecimal fee = BASE_FEE;
+
+        BigDecimal firstTier = remaining.min(new BigDecimal("3.00"));
+        fee = fee.add(firstTier.multiply(new BigDecimal("0.35")));
+        remaining = remaining.subtract(firstTier);
+
+        if (remaining.signum() > 0) {
+            BigDecimal secondTier = remaining.min(new BigDecimal("3.00"));
+            fee = fee.add(secondTier.multiply(new BigDecimal("0.45")));
+            remaining = remaining.subtract(secondTier);
+        }
+
+        if (remaining.signum() > 0) {
+            BigDecimal thirdTier = remaining.min(new BigDecimal("4.00"));
+            fee = fee.add(thirdTier.multiply(new BigDecimal("0.55")));
+            remaining = remaining.subtract(thirdTier);
+        }
+
+        if (remaining.signum() > 0) {
+            fee = fee.add(remaining.multiply(new BigDecimal("0.65")));
+        }
+
+        return fee;
     }
 
     private BigDecimal distanceKm(Restaurant restaurant, Address address) {

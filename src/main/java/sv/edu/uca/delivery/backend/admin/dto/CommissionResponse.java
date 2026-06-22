@@ -8,6 +8,7 @@ public record CommissionResponse(
         Long id,
         UUID restaurantId,
         BigDecimal commissionPercentage,
+        BigDecimal deliveryCommissionPercentage,
         LocalDateTime startsAt,
         LocalDateTime endsAt,
         boolean global
@@ -16,9 +17,10 @@ public record CommissionResponse(
             Long id,
             UUID restaurantId,
             BigDecimal commissionPercentage,
+            BigDecimal deliveryCommissionPercentage,
             LocalDateTime startsAt,
             LocalDateTime endsAt
     ) {
-        this(id, restaurantId, commissionPercentage, startsAt, endsAt, restaurantId == null);
+        this(id, restaurantId, commissionPercentage, deliveryCommissionPercentage, startsAt, endsAt, restaurantId == null);
     }
 }
