@@ -72,7 +72,7 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
             select cast(u.id as text),
                    concat(u.first_name, ' ', u.last_name),
                    count(da.id),
-                   coalesce(sum(o.delivery_fee + o.tip_amount), 0)
+                   coalesce(sum(o.delivery_fee), 0)
             from users u
             join roles role on role.id = u.role_id and role.name = 'DELIVERY'
             left join delivery_assignments da on da.delivery_user_id = u.id and da.status = 'DELIVERED'

@@ -285,9 +285,9 @@ public class DeliveryService {
                     earnings.tips as tips_received,
                     coalesce(commission.percentage, 0) as platform_commission_percentage,
                     (earnings.delivery_fees + earnings.tips) as gross_earnings,
-                    (earnings.delivery_fees + earnings.tips) * coalesce(commission.percentage, 0) / 100 as platform_commission_amount,
+                    earnings.delivery_fees * coalesce(commission.percentage, 0) / 100 as platform_commission_amount,
                     (earnings.delivery_fees + earnings.tips)
-                        - ((earnings.delivery_fees + earnings.tips) * coalesce(commission.percentage, 0) / 100) as net_earnings
+                        - (earnings.delivery_fees * coalesce(commission.percentage, 0) / 100) as net_earnings
                 from earnings
                 left join commission on true
                 """, (rs, rowNum) -> new DeliveryStatsResponse(
