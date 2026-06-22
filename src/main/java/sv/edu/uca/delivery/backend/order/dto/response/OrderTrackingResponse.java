@@ -1,6 +1,7 @@
 package sv.edu.uca.delivery.backend.order.dto.response;
 
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
+import sv.edu.uca.delivery.backend.payment.entity.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,6 +19,9 @@ public record OrderTrackingResponse(
         BigDecimal deliveryFee,
         BigDecimal distanceKm,
         Boolean peakDemand,
+        PaymentStatus paymentStatus,
+        String refundStatus,
+        String statusReason,
         List<OrderStatusHistoryResponse> history
 ) {
 }

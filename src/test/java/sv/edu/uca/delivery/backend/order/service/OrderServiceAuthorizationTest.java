@@ -12,6 +12,7 @@ import sv.edu.uca.delivery.backend.auth.entity.Role;
 import sv.edu.uca.delivery.backend.auth.entity.RoleName;
 import sv.edu.uca.delivery.backend.cart.repository.CartRepository;
 import sv.edu.uca.delivery.backend.common.exception.BusinessException;
+import sv.edu.uca.delivery.backend.complaint.repository.RefundRepository;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRedemptionRepository;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRepository;
 import sv.edu.uca.delivery.backend.delivery.repository.DeliveryAssignmentRepository;
@@ -67,6 +68,9 @@ class OrderServiceAuthorizationTest {
     private PaymentRepository paymentRepository;
 
     @Mock
+    private RefundRepository refundRepository;
+
+    @Mock
     private RestaurantScheduleRepository restaurantScheduleRepository;
 
     @Mock
@@ -100,6 +104,7 @@ class OrderServiceAuthorizationTest {
                 couponRepository,
                 couponRedemptionRepository,
                 paymentRepository,
+                refundRepository,
                 restaurantScheduleRepository,
                 deliveryAssignmentRepository,
                 deliveryEstimateService,

@@ -10,5 +10,7 @@ public interface RefundRepository extends JpaRepository<Refund, UUID> {
 
     Optional<Refund> findFirstByComplaintIdOrderByCreatedAtDesc(UUID complaintId);
 
+    Optional<Refund> findFirstByPaymentOrderIdOrderByCreatedAtDesc(UUID orderId);
+
     boolean existsByComplaintId(UUID complaintId);
 }

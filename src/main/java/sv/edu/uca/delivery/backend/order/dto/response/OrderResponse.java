@@ -1,6 +1,7 @@
 package sv.edu.uca.delivery.backend.order.dto.response;
 
 import sv.edu.uca.delivery.backend.order.entity.OrderStatus;
+import sv.edu.uca.delivery.backend.payment.entity.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,6 +24,9 @@ public record OrderResponse(
         BigDecimal demandMultiplier,
         Boolean peakDemand,
         BigDecimal distanceKm,
+        PaymentStatus paymentStatus,
+        String refundStatus,
+        String statusReason,
         LocalDateTime createdAt,
         List<OrderItemResponse> items,
         List<OrderStatusHistoryResponse> statusHistory

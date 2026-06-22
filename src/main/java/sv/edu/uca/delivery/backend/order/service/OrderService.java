@@ -13,10 +13,14 @@ import sv.edu.uca.delivery.backend.cart.entity.CartStatus;
 import sv.edu.uca.delivery.backend.cart.repository.CartRepository;
 import sv.edu.uca.delivery.backend.common.exception.BusinessException;
 import sv.edu.uca.delivery.backend.common.time.AppClock;
+import sv.edu.uca.delivery.backend.complaint.entity.Refund;
+import sv.edu.uca.delivery.backend.complaint.entity.RefundStatus;
+import sv.edu.uca.delivery.backend.complaint.repository.RefundRepository;
 import sv.edu.uca.delivery.backend.coupon.entity.Coupon;
 import sv.edu.uca.delivery.backend.coupon.entity.CouponRedemption;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRedemptionRepository;
 import sv.edu.uca.delivery.backend.coupon.repository.CouponRepository;
+import sv.edu.uca.delivery.backend.delivery.exception.DeliveryBusinessException;
 import sv.edu.uca.delivery.backend.delivery.repository.DeliveryAssignmentRepository;
 import sv.edu.uca.delivery.backend.delivery.service.DeliveryEstimateService;
 import sv.edu.uca.delivery.backend.delivery.service.DeliveryService;
@@ -61,6 +65,7 @@ public class OrderService {
     private final CouponRepository couponRepository;
     private final CouponRedemptionRepository couponRedemptionRepository;
     private final PaymentRepository paymentRepository;
+    private final RefundRepository refundRepository;
     private final RestaurantScheduleRepository restaurantScheduleRepository;
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final DeliveryEstimateService deliveryEstimateService;
@@ -212,7 +217,7 @@ public class OrderService {
         order.setConfirmedAt(AppClock.now());
         addHistory(order, previous, OrderStatus.CONFIRMED, currentUser(), "Restaurant confirmed order");
         Order saved = orderRepository.save(order);
-        deliveryServiceProvider.getObject().assignAutomatically(saved);
+        assignDriverOrRefund(saved);
         return toResponse(saved);
     }
 
@@ -239,6 +244,10 @@ public class OrderService {
         Address address = order.getDeliveryAddress();
         String textAddress = address.getStreetAddress() + ", " + address.getCity() + ", El Salvador";
         var assignment = deliveryAssignmentRepository.findByOrderId(order.getId()).orElse(null);
+        Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()).orElse(null);
+        String refundStatus = refundRepository.findFirstByPaymentOrderIdOrderByCreatedAtDesc(order.getId())
+                .map(refund -> refund.getStatus().name())
+                .orElse(null);
         return new OrderTrackingResponse(
                 order.getId(),
                 order.getStatus(),
@@ -251,6 +260,9 @@ public class OrderService {
                 order.getDeliveryFee(),
                 order.getDistanceKm(),
                 order.getDemandMultiplier() != null && order.getDemandMultiplier().compareTo(BigDecimal.ONE) > 0,
+                payment == null ? null : payment.getStatus(),
+                refundStatus,
+                statusReason(order.getStatus()),
                 historyRepository.findByOrderIdOrderByChangedAtAsc(order.getId())
                         .stream()
                         .map(this::toHistory)
@@ -396,6 +408,62 @@ public class OrderService {
         return discount.min(subtotal);
     }
 
+    private void assignDriverOrRefund(Order order) {
+        DeliveryService deliveryService = deliveryServiceProvider.getObject();
+        try {
+            deliveryService.assignAutomatically(order);
+            return;
+        } catch (DeliveryBusinessException ignored) {
+            markWaitingForDriver(order);
+        }
+
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                deliveryService.assignAutomatically(order);
+                OrderStatus previous = order.getStatus();
+                order.setStatus(OrderStatus.CONFIRMED);
+                Order saved = orderRepository.save(order);
+                addHistory(saved, previous, OrderStatus.CONFIRMED, null, "Delivery driver found after automatic retry");
+                return;
+            } catch (DeliveryBusinessException ignored) {
+                // A scheduled retry can reuse assignAutomatically later; keep this flow synchronous for now.
+            }
+        }
+
+        markNoDriverAvailableAndRefund(order);
+    }
+
+    private void markWaitingForDriver(Order order) {
+        OrderStatus previous = order.getStatus();
+        order.setStatus(OrderStatus.WAITING_FOR_DRIVER);
+        Order saved = orderRepository.save(order);
+        addHistory(saved, previous, OrderStatus.WAITING_FOR_DRIVER, null, "No delivery driver was available; retrying assignment");
+    }
+
+    private void markNoDriverAvailableAndRefund(Order order) {
+        OrderStatus previous = order.getStatus();
+        order.setStatus(OrderStatus.NO_DRIVER_AVAILABLE);
+        order.setCancelledAt(AppClock.now());
+        Order saved = orderRepository.save(order);
+        addHistory(saved, previous, OrderStatus.NO_DRIVER_AVAILABLE, null, "Order cancelled automatically because no delivery driver was available");
+
+        paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(saved.getId()).ifPresent(payment -> {
+            if (payment.getStatus() != PaymentStatus.REFUNDED) {
+                payment.setStatus(PaymentStatus.REFUNDED);
+                paymentRepository.save(payment);
+            }
+            if (refundRepository.findFirstByPaymentOrderIdOrderByCreatedAtDesc(saved.getId()).isEmpty()) {
+                Refund refund = new Refund();
+                refund.setPayment(payment);
+                refund.setStatus(RefundStatus.PROCESSED);
+                refund.setAmount(payment.getAmount());
+                refund.setReason("Simulated refund: no delivery driver available");
+                refund.setProcessedAt(AppClock.now());
+                refundRepository.save(refund);
+            }
+        });
+    }
+
     private boolean isRestaurantAcceptingOrders(Restaurant restaurant, LocalDateTime now) {
         if (!restaurant.isOpen()) {
             return false;
@@ -467,6 +535,10 @@ public class OrderService {
     }
 
     private OrderResponse toResponse(Order order) {
+        Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()).orElse(null);
+        String refundStatus = refundRepository.findFirstByPaymentOrderIdOrderByCreatedAtDesc(order.getId())
+                .map(refund -> refund.getStatus().name())
+                .orElse(null);
         return new OrderResponse(
                 order.getId(),
                 order.getCustomer().getId(),
@@ -483,10 +555,23 @@ public class OrderService {
                 order.getDemandMultiplier(),
                 order.getDemandMultiplier() != null && order.getDemandMultiplier().compareTo(BigDecimal.ONE) > 0,
                 order.getDistanceKm(),
+                payment == null ? null : payment.getStatus(),
+                refundStatus,
+                statusReason(order.getStatus()),
                 order.getCreatedAt(),
                 order.getItems().stream().map(this::toItem).toList(),
                 historyRepository.findByOrderIdOrderByChangedAtAsc(order.getId()).stream().map(this::toHistory).toList()
         );
+    }
+
+    private String statusReason(OrderStatus status) {
+        if (status == OrderStatus.NO_DRIVER_AVAILABLE) {
+            return "No fue posible encontrar un repartidor. El pedido fue cancelado y el pago fue reembolsado de forma simulada.";
+        }
+        if (status == OrderStatus.WAITING_FOR_DRIVER) {
+            return "Estamos intentando asignar un repartidor disponible.";
+        }
+        return null;
     }
 
     private OrderItemResponse toItem(OrderItem item) {
