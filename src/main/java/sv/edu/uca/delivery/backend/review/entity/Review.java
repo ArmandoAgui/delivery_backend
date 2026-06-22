@@ -2,6 +2,8 @@ package sv.edu.uca.delivery.backend.review.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -11,6 +13,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import sv.edu.uca.delivery.backend.order.entity.Order;
+import sv.edu.uca.delivery.backend.product.entity.Product;
 import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
@@ -42,6 +45,14 @@ public class Review {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delivery_user_id")
     private User deliveryUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    private Product product;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_type", nullable = false, length = 30)
+    private ReviewType reviewType = ReviewType.RESTAURANT;
 
     @Column(nullable = false)
     private Integer rating;

@@ -45,4 +45,10 @@ public class ReviewController {
     public List<ReviewResponse> byDeliveryUser(@PathVariable UUID deliveryUserId) {
         return reviewService.byDeliveryUser(deliveryUserId);
     }
+
+    @GetMapping("/product/{productId}")
+    @Operation(summary = "Calificaciones por producto", description = "Lista reviews publicas de un platillo o producto.")
+    public List<ReviewResponse> byProduct(@PathVariable UUID productId) {
+        return reviewService.byProduct(productId);
+    }
 }
