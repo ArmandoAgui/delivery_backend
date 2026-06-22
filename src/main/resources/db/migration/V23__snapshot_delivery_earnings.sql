@@ -17,22 +17,31 @@ ALTER TABLE delivery_assignments
         AND delivery_platform_commission_percentage <= 100
     );
 
+WITH delivered_snapshots AS (
+    SELECT da.id,
+           round((o.delivery_fee + o.tip_amount)::numeric, 2) AS gross_earnings,
+           coalesce(applied_commission.delivery_commission_percentage, 0) AS commission_percentage,
+           round((o.delivery_fee * coalesce(applied_commission.delivery_commission_percentage, 0) / 100)::numeric, 2) AS commission_amount,
+           round((o.delivery_fee + o.tip_amount - (o.delivery_fee * coalesce(applied_commission.delivery_commission_percentage, 0) / 100))::numeric, 2) AS net_earnings
+    FROM delivery_assignments da
+    JOIN orders o ON o.id = da.order_id
+    LEFT JOIN LATERAL (
+        SELECT pc.delivery_commission_percentage
+        FROM platform_commissions pc
+        WHERE pc.starts_at <= coalesce(da.delivered_at, now())
+          AND (pc.ends_at IS NULL OR pc.ends_at > coalesce(da.delivered_at, now()))
+        ORDER BY pc.starts_at DESC
+        LIMIT 1
+    ) applied_commission ON TRUE
+    WHERE da.status = 'DELIVERED'
+      AND da.delivery_gross_earnings = 0
+      AND da.delivery_platform_commission_amount = 0
+      AND da.delivery_net_earnings = 0
+)
 UPDATE delivery_assignments da
-SET delivery_gross_earnings = round((o.delivery_fee + o.tip_amount)::numeric, 2),
-    delivery_platform_commission_percentage = coalesce(applied_commission.delivery_commission_percentage, 0),
-    delivery_platform_commission_amount = round((o.delivery_fee * coalesce(applied_commission.delivery_commission_percentage, 0) / 100)::numeric, 2),
-    delivery_net_earnings = round((o.delivery_fee + o.tip_amount - (o.delivery_fee * coalesce(applied_commission.delivery_commission_percentage, 0) / 100))::numeric, 2)
-FROM orders o
-LEFT JOIN LATERAL (
-    SELECT pc.delivery_commission_percentage
-    FROM platform_commissions pc
-    WHERE pc.starts_at <= coalesce(da.delivered_at, now())
-      AND (pc.ends_at IS NULL OR pc.ends_at > coalesce(da.delivered_at, now()))
-    ORDER BY pc.starts_at DESC
-    LIMIT 1
-) applied_commission ON TRUE
-WHERE o.id = da.order_id
-  AND da.status = 'DELIVERED'
-  AND da.delivery_gross_earnings = 0
-  AND da.delivery_platform_commission_amount = 0
-  AND da.delivery_net_earnings = 0;
+SET delivery_gross_earnings = delivered_snapshots.gross_earnings,
+    delivery_platform_commission_percentage = delivered_snapshots.commission_percentage,
+    delivery_platform_commission_amount = delivered_snapshots.commission_amount,
+    delivery_net_earnings = delivered_snapshots.net_earnings
+FROM delivered_snapshots
+WHERE da.id = delivered_snapshots.id;
