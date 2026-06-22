@@ -56,7 +56,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private static final BigDecimal TAX_RATE = new BigDecimal("0.13");
     private final OrderRepository orderRepository;
     private final OrderStatusHistoryRepository historyRepository;
     private final CartRepository cartRepository;
@@ -96,7 +95,7 @@ public class OrderService {
         BigDecimal tip = request.tipAmount() == null ? BigDecimal.ZERO : request.tipAmount();
         Coupon coupon = findCoupon(request.couponCode());
         BigDecimal couponDiscount = coupon == null ? BigDecimal.ZERO : calculateDiscount(coupon, subtotal);
-        BigDecimal tax = subtotal.multiply(TAX_RATE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal tax = BigDecimal.ZERO;
         var deliveryEstimate = deliveryEstimateService.estimate(
                 cart.getRestaurant(),
                 address,
