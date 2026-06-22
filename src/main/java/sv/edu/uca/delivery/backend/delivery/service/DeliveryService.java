@@ -30,6 +30,7 @@ import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.user.repository.UserRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -262,7 +263,11 @@ public class DeliveryService {
         return jdbcTemplate.queryForObject("""
                 with earnings as (
                     select coalesce(sum(o.delivery_fee), 0) as delivery_fees,
-                           coalesce(sum(o.tip_amount), 0) as tips
+                           coalesce(sum(o.tip_amount), 0) as tips,
+                           coalesce(sum(da.delivery_gross_earnings), 0) as gross_earnings,
+                           coalesce(sum(da.delivery_platform_commission_amount), 0) as platform_commission_amount,
+                           coalesce(sum(da.delivery_net_earnings), 0) as net_earnings,
+                           avg(da.delivery_platform_commission_percentage) as average_commission_percentage
                     from delivery_assignments da
                     join orders o on o.id = da.order_id
                     where da.delivery_user_id = cast(? as uuid)
@@ -283,11 +288,10 @@ public class DeliveryService {
                     (select count(*) from delivery_assignment_rejections where delivery_user_id = cast(? as uuid)) as rejected_requests,
                     earnings.delivery_fees as estimated_delivery_earnings,
                     earnings.tips as tips_received,
-                    coalesce(commission.percentage, 0) as platform_commission_percentage,
-                    (earnings.delivery_fees + earnings.tips) as gross_earnings,
-                    earnings.delivery_fees * coalesce(commission.percentage, 0) / 100 as platform_commission_amount,
-                    (earnings.delivery_fees + earnings.tips)
-                        - (earnings.delivery_fees * coalesce(commission.percentage, 0) / 100) as net_earnings
+                    coalesce(earnings.average_commission_percentage, commission.percentage, 0) as platform_commission_percentage,
+                    earnings.gross_earnings as gross_earnings,
+                    earnings.platform_commission_amount as platform_commission_amount,
+                    earnings.net_earnings as net_earnings
                 from earnings
                 left join commission on true
                 """, (rs, rowNum) -> new DeliveryStatsResponse(
@@ -360,12 +364,48 @@ public class DeliveryService {
         }
         if (requestedStatus == DeliveryStatus.DELIVERED) {
             assignment.setDeliveredAt(now);
+            applyDeliveryEarningsSnapshot(assignment);
             if (orderService != null) {
                 orderService.markDelivered(assignment.getOrder(), assignment.getDeliveryUser());
             } else {
                 assignment.getOrder().setStatus(OrderStatus.DELIVERED);
             }
         }
+    }
+
+    private void applyDeliveryEarningsSnapshot(DeliveryAssignment assignment) {
+        BigDecimal deliveryFee = nullToZero(assignment.getOrder().getDeliveryFee());
+        BigDecimal tip = nullToZero(assignment.getOrder().getTipAmount());
+        BigDecimal commissionPercentage = currentDeliveryCommissionPercentage();
+        BigDecimal commissionAmount = deliveryFee
+                .multiply(commissionPercentage)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal grossEarnings = deliveryFee.add(tip).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netEarnings = grossEarnings.subtract(commissionAmount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+
+        assignment.setDeliveryGrossEarnings(grossEarnings);
+        assignment.setDeliveryPlatformCommissionPercentage(commissionPercentage.setScale(2, RoundingMode.HALF_UP));
+        assignment.setDeliveryPlatformCommissionAmount(commissionAmount);
+        assignment.setDeliveryNetEarnings(netEarnings);
+    }
+
+    private BigDecimal currentDeliveryCommissionPercentage() {
+        if (jdbcTemplate == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal percentage = jdbcTemplate.queryForObject("""
+                select coalesce(pc.delivery_commission_percentage, 0)
+                from platform_commissions pc
+                where pc.starts_at <= now()
+                  and (pc.ends_at is null or pc.ends_at > now())
+                order by pc.starts_at desc
+                limit 1
+                """, BigDecimal.class);
+        return percentage == null ? BigDecimal.ZERO : percentage;
+    }
+
+    private BigDecimal nullToZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private DeliveryAssignment findOwnedAssignmentForUpdate(UUID deliveryAssignmentId, UUID deliveryUserId) {

@@ -16,6 +16,7 @@ import sv.edu.uca.delivery.backend.order.entity.Order;
 import sv.edu.uca.delivery.backend.user.entity.User;
 import sv.edu.uca.delivery.backend.util.uuid.UuidV7Generator;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -48,6 +49,18 @@ public class DeliveryAssignment {
 
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
+
+    @Column(name = "delivery_gross_earnings", nullable = false)
+    private BigDecimal deliveryGrossEarnings = BigDecimal.ZERO;
+
+    @Column(name = "delivery_platform_commission_percentage", nullable = false)
+    private BigDecimal deliveryPlatformCommissionPercentage = BigDecimal.ZERO;
+
+    @Column(name = "delivery_platform_commission_amount", nullable = false)
+    private BigDecimal deliveryPlatformCommissionAmount = BigDecimal.ZERO;
+
+    @Column(name = "delivery_net_earnings", nullable = false)
+    private BigDecimal deliveryNetEarnings = BigDecimal.ZERO;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
