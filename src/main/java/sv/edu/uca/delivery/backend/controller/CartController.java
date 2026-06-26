@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import sv.edu.uca.delivery.backend.dto.AddCartItemRequest;
+import sv.edu.uca.delivery.backend.dto.CartQuoteRequest;
+import sv.edu.uca.delivery.backend.dto.CartQuoteResponse;
 import sv.edu.uca.delivery.backend.dto.CartResponse;
 import sv.edu.uca.delivery.backend.dto.UpdateCartItemRequest;
 import sv.edu.uca.delivery.backend.service.CartService;
@@ -33,6 +35,12 @@ public class CartController {
     @Operation(summary = "Consultar carrito activo")
     public CartResponse getCart() {
         return cartService.getCart();
+    }
+
+    @PostMapping("/quote")
+    @Operation(summary = "Cotizar carrito", description = "Calcula total seguro del carrito con envio, propina, cupon y saldo digital sin crear el pedido.")
+    public CartQuoteResponse quote(@RequestBody @Valid CartQuoteRequest request) {
+        return cartService.quote(request);
     }
 
     @PostMapping("/items")
