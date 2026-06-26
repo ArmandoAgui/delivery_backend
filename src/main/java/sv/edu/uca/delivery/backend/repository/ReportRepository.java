@@ -10,7 +10,7 @@ import java.util.List;
 public interface ReportRepository extends Repository<Order, java.util.UUID> {
 
     @Query(value = """
-            select cast(r.id as text), r.name, count(o.id), coalesce(sum(o.total_amount), 0)
+            select cast(r.id as text), r.name, count(o.id), coalesce(sum(o.subtotal_amount), 0)
             from restaurants r
             left join orders o on o.restaurant_id = r.id
             group by r.id, r.name
@@ -22,9 +22,9 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
             select cast(r.id as text),
                    r.name,
                    count(o.id),
-                   coalesce(sum(o.total_amount), 0) as revenue,
+                   coalesce(sum(o.subtotal_amount), 0) as revenue,
                    coalesce(latest_commission.commission_percentage, 0) as commission_percentage,
-                   coalesce(sum(o.total_amount), 0) * coalesce(latest_commission.commission_percentage, 0) / 100 as commission_amount
+                   coalesce(sum(o.subtotal_amount), 0) * coalesce(latest_commission.commission_percentage, 0) / 100 as commission_amount
             from restaurants r
             left join orders o on o.restaurant_id = r.id
             left join lateral (
@@ -102,7 +102,7 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
     long openComplaints();
 
     @Query(value = """
-            select coalesce(sum(o.total_amount), 0) * coalesce(latest_commission.commission_percentage, 0) / 100
+            select coalesce(sum(o.subtotal_amount), 0) * coalesce(latest_commission.commission_percentage, 0) / 100
             from orders o
             left join lateral (
                 select pc.commission_percentage

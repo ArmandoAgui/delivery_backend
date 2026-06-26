@@ -22,6 +22,7 @@ import sv.edu.uca.delivery.backend.security.AuthenticatedUserProvider;
 import sv.edu.uca.delivery.backend.entity.User;
 import sv.edu.uca.delivery.backend.repository.UserRepository;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -158,6 +159,10 @@ class DeliveryServiceTest {
     void updateStatusToDeliveredMarksOrderDelivered() {
         User deliveryUser = deliveryUser();
         DeliveryAssignment assignment = assignment(deliveryUser, DeliveryStatus.ON_THE_WAY, OrderStatus.ON_THE_WAY);
+        assignment.getOrder().setDeliveryFee(new BigDecimal("3.00"));
+        assignment.getOrder().setTipAmount(new BigDecimal("2.00"));
+        assignment.getOrder().setDiscountAmount(new BigDecimal("10.00"));
+        assignment.getOrder().setTotalAmount(new BigDecimal("20.00"));
 
         when(authenticatedUserProvider.getCurrentUserId()).thenReturn(deliveryUser.getId());
         when(userRepository.findActiveUserByIdAndRole(deliveryUser.getId(), RoleName.DELIVERY))
@@ -174,6 +179,9 @@ class DeliveryServiceTest {
         assertThat(response.status()).isEqualTo(DeliveryStatus.DELIVERED);
         assertThat(assignment.getOrder().getStatus()).isEqualTo(OrderStatus.DELIVERED);
         assertThat(assignment.getDeliveredAt()).isNotNull();
+        assertThat(assignment.getDeliveryGrossEarnings()).isEqualByComparingTo("5.00");
+        assertThat(assignment.getDeliveryPlatformCommissionAmount()).isEqualByComparingTo("0.00");
+        assertThat(assignment.getDeliveryNetEarnings()).isEqualByComparingTo("5.00");
     }
 
     private User deliveryUser() {
