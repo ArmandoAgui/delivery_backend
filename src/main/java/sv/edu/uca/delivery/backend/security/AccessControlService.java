@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sv.edu.uca.delivery.backend.auth.entity.RoleName;
-import sv.edu.uca.delivery.backend.common.exception.BusinessException;
-import sv.edu.uca.delivery.backend.restaurant.entity.Restaurant;
-import sv.edu.uca.delivery.backend.user.entity.User;
-import sv.edu.uca.delivery.backend.user.repository.UserRepository;
+import sv.edu.uca.delivery.backend.entity.RoleName;
+import sv.edu.uca.delivery.backend.exception.BusinessException;
+import sv.edu.uca.delivery.backend.entity.Restaurant;
+import sv.edu.uca.delivery.backend.entity.User;
+import sv.edu.uca.delivery.backend.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
