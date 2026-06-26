@@ -72,6 +72,7 @@ public class OrderService {
     private final AuthenticatedUserProvider authenticatedUserProvider;
     private final OrderFactory orderFactory;
     private final LoyaltyService loyaltyService;
+    private final RestaurantCommissionService restaurantCommissionService;
 
     @Transactional
     public OrderResponse createFromCart(CreateOrderFromCartRequest request) {
@@ -559,6 +560,7 @@ public class OrderService {
         String refundStatus = refundRepository.findFirstByPaymentOrderIdOrderByCreatedAtDesc(order.getId())
                 .map(refund -> refund.getStatus().name())
                 .orElse(null);
+        RestaurantCommissionService.Snapshot restaurantCommission = restaurantCommissionService.snapshotFor(order);
         return new OrderResponse(
                 order.getId(),
                 order.getCustomer().getId(),
@@ -571,6 +573,10 @@ public class OrderService {
                 order.getTipAmount(),
                 order.getDiscountAmount(),
                 order.getTotalAmount(),
+                restaurantCommission.grossAmount(),
+                restaurantCommission.commissionPercentage(),
+                restaurantCommission.commissionAmount(),
+                restaurantCommission.netAmount(),
                 order.getEstimatedDeliveryMinutes(),
                 order.getDemandMultiplier(),
                 order.getDemandMultiplier() != null && order.getDemandMultiplier().compareTo(BigDecimal.ONE) > 0,

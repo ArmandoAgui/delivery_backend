@@ -23,19 +23,27 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
                    r.name,
                    count(o.id),
                    coalesce(sum(o.subtotal_amount), 0) as revenue,
-                   coalesce(latest_commission.commission_percentage, 0) as commission_percentage,
-                   coalesce(sum(o.subtotal_amount), 0) * coalesce(latest_commission.commission_percentage, 0) / 100 as commission_amount
+                   case
+                       when coalesce(sum(o.subtotal_amount), 0) > 0 then
+                           coalesce(sum(o.subtotal_amount * coalesce(applied_commission.commission_percentage, 0) / 100), 0)
+                           / coalesce(sum(o.subtotal_amount), 0) * 100
+                       else 0
+                   end as effective_commission_percentage,
+                   coalesce(sum(o.subtotal_amount * coalesce(applied_commission.commission_percentage, 0) / 100), 0) as commission_amount,
+                   coalesce(sum(o.subtotal_amount), 0)
+                       - coalesce(sum(o.subtotal_amount * coalesce(applied_commission.commission_percentage, 0) / 100), 0) as net_revenue
             from restaurants r
             left join orders o on o.restaurant_id = r.id
             left join lateral (
                 select pc.commission_percentage
                 from platform_commissions pc
-                where pc.starts_at <= now()
-                  and (pc.ends_at is null or pc.ends_at > now())
+                where o.id is not null
+                  and pc.starts_at <= o.created_at
+                  and (pc.ends_at is null or pc.ends_at > o.created_at)
                 order by pc.starts_at desc
                 limit 1
-            ) latest_commission on true
-            group by r.id, r.name, latest_commission.commission_percentage
+            ) applied_commission on true
+            group by r.id, r.name
             order by commission_amount desc, revenue desc
             """, nativeQuery = true)
     List<Object[]> restaurantCommissionStats();
@@ -102,17 +110,16 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
     long openComplaints();
 
     @Query(value = """
-            select coalesce(sum(o.subtotal_amount), 0) * coalesce(latest_commission.commission_percentage, 0) / 100
+            select coalesce(sum(o.subtotal_amount * coalesce(applied_commission.commission_percentage, 0) / 100), 0)
             from orders o
             left join lateral (
                 select pc.commission_percentage
                 from platform_commissions pc
-                where pc.starts_at <= now()
-                  and (pc.ends_at is null or pc.ends_at > now())
+                where pc.starts_at <= o.created_at
+                  and (pc.ends_at is null or pc.ends_at > o.created_at)
                 order by pc.starts_at desc
                 limit 1
-            ) latest_commission on true
-            group by latest_commission.commission_percentage
+            ) applied_commission on true
             """, nativeQuery = true)
     BigDecimal estimatedCommissions();
 }

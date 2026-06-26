@@ -91,6 +91,9 @@ class OrderServiceAuthorizationTest {
     @Mock
     private LoyaltyService loyaltyService;
 
+    @Mock
+    private RestaurantCommissionService restaurantCommissionService;
+
     private OrderService orderService;
 
     @BeforeEach
@@ -111,7 +114,8 @@ class OrderServiceAuthorizationTest {
                 deliveryServiceProvider,
                 authenticatedUserProvider,
                 orderFactory,
-                loyaltyService
+                loyaltyService,
+                restaurantCommissionService
         );
     }
 

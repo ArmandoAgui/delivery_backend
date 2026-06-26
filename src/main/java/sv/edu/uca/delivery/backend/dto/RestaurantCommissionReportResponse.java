@@ -9,6 +9,7 @@ public record RestaurantCommissionReportResponse(
         long orders,
         BigDecimal revenue,
         BigDecimal commissionPercentage,
-        BigDecimal commissionAmount
+        BigDecimal commissionAmount,
+        BigDecimal netRevenue
 ) {
 }

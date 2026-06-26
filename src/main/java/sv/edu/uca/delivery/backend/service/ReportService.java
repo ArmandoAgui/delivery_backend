@@ -51,7 +51,8 @@ public class ReportService {
                         ((Number) row[2]).longValue(),
                         (BigDecimal) row[3],
                         (BigDecimal) row[4],
-                        (BigDecimal) row[5]
+                        (BigDecimal) row[5],
+                        (BigDecimal) row[6]
                 ))
                 .toList();
     }
