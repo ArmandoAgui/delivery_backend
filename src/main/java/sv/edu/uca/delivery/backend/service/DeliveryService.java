@@ -50,6 +50,7 @@ public class DeliveryService {
             DeliveryStatus.CANCELLED,
             DeliveryStatus.REJECTED
     );
+    private static final int COORDINATE_SCALE = 6;
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -220,6 +221,8 @@ public class DeliveryService {
     public DeliveryProfileResponse updateLocation(UpdateDeliveryLocationRequest request) {
         UUID deliveryUserId = authenticatedUserProvider.getCurrentUserId();
         User deliveryUser = validateDeliveryUser(deliveryUserId);
+        BigDecimal latitude = normalizeCoordinate(request.latitude());
+        BigDecimal longitude = normalizeCoordinate(request.longitude());
         requireJdbc();
         jdbcTemplate.update("""
                 insert into delivery_profiles (delivery_user_id, is_available, updated_at)
@@ -231,7 +234,7 @@ public class DeliveryService {
         jdbcTemplate.update("""
                 insert into delivery_locations (id, delivery_user_id, location, recorded_at, created_at)
                 values (cast(? as uuid), cast(? as uuid), ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, now(), now())
-                """, UUID.randomUUID(), deliveryUserId, request.longitude(), request.latitude());
+                """, UUID.randomUUID(), deliveryUserId, longitude, latitude);
         return getProfile(deliveryUser);
     }
 
@@ -465,8 +468,8 @@ public class DeliveryService {
                             deliveryUser.getId(),
                             fullName(deliveryUser),
                             rs.getBoolean("is_available"),
-                            (Double) rs.getObject("latitude"),
-                            (Double) rs.getObject("longitude"),
+                            normalizeCoordinate(rs.getBigDecimal("latitude")),
+                            normalizeCoordinate(rs.getBigDecimal("longitude")),
                             rs.getTimestamp("recorded_at") == null ? null : rs.getTimestamp("recorded_at").toLocalDateTime(),
                             averageRating(deliveryUser.getId()),
                             reviewCount(deliveryUser.getId())
@@ -484,6 +487,10 @@ public class DeliveryService {
 
     private String fullName(User user) {
         return user.getFirstName() + " " + user.getLastName();
+    }
+
+    private BigDecimal normalizeCoordinate(BigDecimal value) {
+        return value == null ? null : value.setScale(COORDINATE_SCALE, RoundingMode.HALF_UP);
     }
 
     private void requireJdbc() {
