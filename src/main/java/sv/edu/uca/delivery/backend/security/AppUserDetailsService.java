@@ -6,8 +6,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sv.edu.uca.delivery.backend.security.principal.AppUserPrincipal;
-import sv.edu.uca.delivery.backend.user.repository.UserRepository;
+import sv.edu.uca.delivery.backend.security.AppUserPrincipal;
+import sv.edu.uca.delivery.backend.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor

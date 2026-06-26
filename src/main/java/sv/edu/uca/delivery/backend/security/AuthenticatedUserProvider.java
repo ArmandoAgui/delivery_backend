@@ -7,9 +7,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-import sv.edu.uca.delivery.backend.delivery.exception.DeliveryUnauthorizedException;
-import sv.edu.uca.delivery.backend.security.principal.AppUserPrincipal;
-import sv.edu.uca.delivery.backend.user.repository.UserRepository;
+import sv.edu.uca.delivery.backend.exception.DeliveryUnauthorizedException;
+import sv.edu.uca.delivery.backend.security.AppUserPrincipal;
+import sv.edu.uca.delivery.backend.repository.UserRepository;
 
 import java.util.UUID;
 
