@@ -13,6 +13,7 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
             select cast(r.id as text), r.name, count(o.id), coalesce(sum(o.subtotal_amount), 0)
             from restaurants r
             left join orders o on o.restaurant_id = r.id
+                and o.status in ('CONFIRMED', 'WAITING_FOR_DRIVER', 'NO_DRIVER_AVAILABLE', 'PREPARING', 'READY_FOR_PICKUP', 'ON_THE_WAY', 'DELIVERED')
             group by r.id, r.name
             order by count(o.id) desc
             """, nativeQuery = true)
@@ -34,6 +35,7 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
                        - coalesce(sum(o.subtotal_amount * coalesce(applied_commission.commission_percentage, 0) / 100), 0) as net_revenue
             from restaurants r
             left join orders o on o.restaurant_id = r.id
+                and o.status in ('CONFIRMED', 'WAITING_FOR_DRIVER', 'NO_DRIVER_AVAILABLE', 'PREPARING', 'READY_FOR_PICKUP', 'ON_THE_WAY', 'DELIVERED')
             left join lateral (
                 select pc.commission_percentage
                 from platform_commissions pc
@@ -48,7 +50,11 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
             """, nativeQuery = true)
     List<Object[]> restaurantCommissionStats();
 
-    @Query("select coalesce(sum(o.totalAmount), 0) from Order o")
+    @Query(value = """
+            select coalesce(sum(o.total_amount), 0)
+            from orders o
+            where o.status in ('CONFIRMED', 'WAITING_FOR_DRIVER', 'NO_DRIVER_AVAILABLE', 'PREPARING', 'READY_FOR_PICKUP', 'ON_THE_WAY', 'DELIVERED')
+            """, nativeQuery = true)
     BigDecimal revenue();
 
     @Query(value = """
@@ -100,6 +106,7 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
             from order_items oi
             join orders o on o.id = oi.order_id
             join restaurants r on r.id = o.restaurant_id
+            where o.status in ('CONFIRMED', 'WAITING_FOR_DRIVER', 'NO_DRIVER_AVAILABLE', 'PREPARING', 'READY_FOR_PICKUP', 'ON_THE_WAY', 'DELIVERED')
             group by oi.product_id, oi.product_name, r.name
             order by coalesce(sum(oi.quantity), 0) desc
             limit 10
@@ -120,6 +127,7 @@ public interface ReportRepository extends Repository<Order, java.util.UUID> {
                 order by pc.starts_at desc
                 limit 1
             ) applied_commission on true
+            where o.status in ('CONFIRMED', 'WAITING_FOR_DRIVER', 'NO_DRIVER_AVAILABLE', 'PREPARING', 'READY_FOR_PICKUP', 'ON_THE_WAY', 'DELIVERED')
             """, nativeQuery = true)
     BigDecimal estimatedCommissions();
 }
