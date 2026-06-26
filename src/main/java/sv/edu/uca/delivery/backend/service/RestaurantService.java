@@ -16,11 +16,15 @@ public interface RestaurantService {
 
     List<RestaurantResponseDTO> findAll();
 
+    List<RestaurantResponseDTO> findAllForAdmin();
+
     RestaurantResponseDTO findMine();
 
     RestaurantResponseDTO findById(UUID id);
 
     List<RestaurantResponseDTO> search(String query);
+
+    List<RestaurantResponseDTO> searchForAdmin(String query);
 
     RestaurantResponseDTO update(UUID id, RestaurantUpdateDTO dto);
 
@@ -29,6 +33,8 @@ public interface RestaurantService {
     void deleteImage(UUID id);
 
     void softDelete(UUID id);
+
+    RestaurantResponseDTO activate(UUID id);
 
     List<RestaurantResponseDTO> findOpenRestaurants();
 

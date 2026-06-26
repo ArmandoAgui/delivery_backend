@@ -116,6 +116,18 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<RestaurantResponseDTO> findAllForAdmin() {
+        requireAdmin();
+        LocalDateTime now = AppClock.now();
+
+        return restaurantRepository.findAllByOrderByNameAsc()
+                .stream()
+                .map(restaurant -> toResponse(restaurant, restaurant.isActive() && isCurrentlyOpen(restaurant.getId(), now)))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public RestaurantResponseDTO findMine() {
         if (accessControlService == null) {
             throw new RestaurantNotFoundException();
@@ -149,6 +161,20 @@ public class RestaurantServiceImpl implements RestaurantService {
         return restaurantRepository.searchActive(query.trim())
                 .stream()
                 .map(restaurant -> toResponse(restaurant, isCurrentlyOpen(restaurant.getId(), now)))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RestaurantResponseDTO> searchForAdmin(String query) {
+        requireAdmin();
+        if (query == null || query.isBlank()) {
+            return findAllForAdmin();
+        }
+        LocalDateTime now = AppClock.now();
+        return restaurantRepository.searchAll(query.trim())
+                .stream()
+                .map(restaurant -> toResponse(restaurant, restaurant.isActive() && isCurrentlyOpen(restaurant.getId(), now)))
                 .toList();
     }
 
@@ -203,12 +229,23 @@ public class RestaurantServiceImpl implements RestaurantService {
         requireOwner(restaurant);
 
         restaurant.setActive(false);
-        if (imageStorageService != null) {
-            imageStorageService.delete(restaurant.getImageUrl());
-        }
-        restaurant.setImageUrl(null);
+        restaurant.setOpen(false);
 
         restaurantRepository.save(restaurant);
+    }
+
+    @Override
+    @Transactional
+    public RestaurantResponseDTO activate(UUID id) {
+        requireAdmin();
+        Restaurant restaurant = restaurantRepository.findById(id)
+                .orElseThrow(RestaurantNotFoundException::new);
+
+        restaurant.setActive(true);
+        restaurant.setOpen(isCurrentlyOpen(restaurant.getId(), AppClock.now()));
+
+        restaurantRepository.save(restaurant);
+        return toResponse(restaurant, restaurant.isOpen());
     }
 
     @Override
@@ -319,6 +356,12 @@ public class RestaurantServiceImpl implements RestaurantService {
     private void requireOwner(Restaurant restaurant) {
         if (accessControlService != null) {
             accessControlService.requireAdminOrRestaurantOwner(restaurant);
+        }
+    }
+
+    private void requireAdmin() {
+        if (accessControlService != null) {
+            accessControlService.requireAdmin();
         }
     }
 

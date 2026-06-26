@@ -13,6 +13,8 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
 
     List<Restaurant> findByActiveTrue();
 
+    List<Restaurant> findAllByOrderByNameAsc();
+
     @Query("""
             select count(r) > 0
             from Restaurant r
@@ -38,6 +40,16 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
             order by r.name asc
             """)
     List<Restaurant> searchActive(@Param("query") String query);
+
+    @Query("""
+            select r
+            from Restaurant r
+            where lower(r.name) like lower(concat('%', :query, '%'))
+               or lower(r.city) like lower(concat('%', :query, '%'))
+               or lower(coalesce(r.description, '')) like lower(concat('%', :query, '%'))
+            order by r.active desc, r.name asc
+            """)
+    List<Restaurant> searchAll(@Param("query") String query);
 
     @Query(value = """
             select ST_Distance(r.location, a.location) / 1000.0
