@@ -8,9 +8,11 @@ Este documento resume como esta desplegado el proyecto Delivery en AWS EC2 para 
 - IP publica actual: `32.199.155.252`
 - Usuario SSH: `ubuntu`
 - Llave SSH local: `/home/armandoaguilar/Downloads/Delivery.pem`
-- URL publica: `http://32.199.155.252/`
-- Swagger UI: `http://32.199.155.252/swagger-ui/index.html`
-- OpenAPI JSON: `http://32.199.155.252/v3/api-docs`
+- URL publica HTTPS: `https://32.199.155.252.sslip.io/`
+- URL publica HTTP: `http://32.199.155.252/` redirige a HTTPS
+- Swagger UI: `https://32.199.155.252.sslip.io/swagger-ui/index.html`
+- OpenAPI JSON: `https://32.199.155.252.sslip.io/v3/api-docs`
+- Zona horaria del servidor: `America/El_Salvador`
 
 Comando SSH:
 
@@ -83,7 +85,8 @@ Puertos:
 
 ```text
 Publico:
-- 80 HTTP -> delivery-nginx
+- 80 HTTP -> delivery-nginx, redirige a HTTPS
+- 443 HTTPS -> delivery-nginx
 
 Internos Docker:
 - frontend: 80
@@ -139,8 +142,10 @@ POSTGRES_USER=delivery
 POSTGRES_PASSWORD=...
 
 HTTP_PORT=80
+HTTPS_PORT=443
 VITE_API_BASE_URL=/api
-CORS_ALLOWED_ORIGINS=http://32.199.155.252,http://localhost
+CORS_ALLOWED_ORIGINS=https://32.199.155.252.sslip.io,http://32.199.155.252,http://localhost
+TZ=America/El_Salvador
 
 DEV_SEED_ENABLED=true
 JWT_SECRET=...
@@ -149,13 +154,13 @@ JWT_REFRESH_TOKEN_DAYS=14
 
 FLYWAY_BASELINE_ON_MIGRATE=false
 FLYWAY_BASELINE_VERSION=0
-JAVA_OPTS=-XX:MaxRAMPercentage=70.0
+JAVA_OPTS=-XX:MaxRAMPercentage=70.0 -Duser.timezone=America/El_Salvador
 ```
 
 Si cambia la IP publica, editar:
 
 ```env
-CORS_ALLOWED_ORIGINS=http://NUEVA_IP,http://localhost
+CORS_ALLOWED_ORIGINS=https://NUEVA_IP.sslip.io,http://NUEVA_IP,http://localhost
 ```
 
 Luego reiniciar backend y Nginx:
@@ -253,20 +258,21 @@ sudo docker compose -f docker-compose.aws.yml --env-file .env logs -f db
 
 ```bash
 curl -I http://localhost/
-curl -I http://localhost/v3/api-docs
+curl -I -k --resolve 32.199.155.252.sslip.io:443:127.0.0.1 https://32.199.155.252.sslip.io/v3/api-docs
 ```
 
 ### Probar desde fuera
 
 ```bash
 curl -I http://32.199.155.252/
-curl -I http://32.199.155.252/v3/api-docs
+curl -I https://32.199.155.252.sslip.io/
+curl -I https://32.199.155.252.sslip.io/v3/api-docs
 ```
 
 ### Probar login
 
 ```bash
-curl -s -X POST http://localhost/api/auth/login \
+curl -s -X POST https://32.199.155.252.sslip.io/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin.dev@example.com","password":"Password123!"}'
 ```
@@ -324,7 +330,7 @@ nano ~/delivery-deploy/delivery_backend/.env
 Actualizar:
 
 ```env
-CORS_ALLOWED_ORIGINS=http://NUEVA_IP,http://localhost
+CORS_ALLOWED_ORIGINS=https://NUEVA_IP.sslip.io,http://NUEVA_IP,http://localhost
 ```
 
 Luego:
@@ -412,12 +418,13 @@ sudo docker compose -f docker-compose.aws.yml --env-file .env down -v
 ## 14. Problemas Conocidos Y Notas
 
 - Si se reconstruye backend/frontend, recrear Nginx para evitar 502 por upstreams viejos.
-- La app esta en HTTP, no HTTPS.
+- La app usa HTTPS con `sslip.io` y certificado Let's Encrypt.
 - La instancia usa una sola maquina para todo: frontend, backend, Nginx y DB.
 - La base esta en volumen Docker local de la instancia, no en RDS.
 - No abrir puertos de PostgreSQL ni backend al publico.
 - Reglas de Security Group recomendadas:
   - Entrada TCP 80 desde `0.0.0.0/0`
+  - Entrada TCP 443 desde `0.0.0.0/0`
   - Entrada TCP 22 solo desde IP confiable
   - Salida abierta por defecto
 
@@ -439,7 +446,7 @@ curl -s -X POST http://localhost/api/auth/login \
 Desde navegador:
 
 ```text
-http://32.199.155.252/
+https://32.199.155.252.sslip.io/
 ```
 
 Si todo responde `200`, el despliegue esta operativo.
