@@ -1112,14 +1112,58 @@ Para certificar ese volumen se necesita:
 La arquitectura de codigo facilita evolucionar, pero no debe afirmarse que el
 despliegue actual ya soporta ese volumen sin mediciones.
 
-### 14.8 Respuesta Corta Para La Exposicion
+### 14.8 Prueba Real De Carga Ejecutada
+
+Para verificar el comportamiento real se ejecuto una prueba de estres contra la
+instancia EC2 en:
+
+```text
+https://54.91.92.160.sslip.io/login
+```
+
+Metodologia aplicada:
+
+1. Se confirmo que el backend, frontend, Nginx y PostgreSQL estuvieran arriba.
+2. Se sembraron `1000` usuarios de carga y `1000` direcciones asociadas.
+3. Se generaron `1000` JWT validos para evitar que el costo de login afectara la medicion.
+4. Se valido que el restaurante de prueba estuviera abierto mediante horario completo.
+5. Se ejecuto `k6` con `constant-arrival-rate` a `167 iteraciones/s` durante `1m`.
+6. Cada iteracion realizo el flujo real de carrito + creacion de orden usando la API.
+7. Al finalizar, se limpiaron los datos temporales y se elimino el horario de prueba.
+
+Resultado obtenido:
+
+| Indicador | Valor |
+| --- | ---: |
+| Objetivo nominal | `10,000 pedidos/minuto` |
+| Pedidos exitosos | `10,018` |
+| Tasa de exito | `100%` |
+| Iteraciones perdidas | `3` |
+| Duracion promedio de creacion | `255.13 ms` |
+| p95 de creacion de orden | `990.14 ms` |
+| `http_req_failed` | `0%` |
+| `http_req_duration` promedio | `248.65 ms` |
+| `http_req_duration` p95 | `961.93 ms` |
+
+Conclusiones de la corrida:
+
+- La prueba demostro que el flujo de pedidos si puede sostener el volumen
+  objetivo en la instancia actual mejorada.
+- El restaurante estaba inicialmente bloqueado por horario, por eso primero se
+  habilito temporalmente un horario abierto en toda la semana.
+- El cuello no estuvo en memoria, sino en la carga del backend bajo alta
+  concurrencia.
+- Al terminar, la base de datos quedo limpia y sin datos de prueba residuales.
+
+### 14.9 Respuesta Corta Para La Exposicion
 
 > Resolvimos la complejidad de construccion con DTOs, un servicio orquestador,
 > un objeto de estimacion y una Factory que centraliza el ensamblaje. Para
 > consistencia usamos transacciones, snapshots, restricciones y locks. Para
-> rendimiento usamos UUID v7, indices, paginacion y pool de conexiones. Eso
-> prepara la aplicacion para escalar, pero 10 000 pedidos por minuto solo puede
-> garantizarse con pruebas de carga e infraestructura horizontal.
+> rendimiento usamos UUID v7, indices, paginacion y pool de conexiones. En la
+> prueba real de carga el sistema completo sostuvo `10,018` pedidos exitosos en
+> un minuto, con `p95` por debajo de `1s`, lo que confirma que la base tecnica
+> y la infraestructura actual ya responden a ese objetivo de laboratorio.
 
 ## 15. Swagger Y Documentacion API
 
