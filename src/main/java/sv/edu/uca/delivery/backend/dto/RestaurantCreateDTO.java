@@ -34,9 +34,7 @@ public class RestaurantCreateDTO {
     private String streetAddress;
 
     @NotBlank
-    private String city;
-
-    private String state;
+    private String department;
 
     @NotNull
     @DecimalMin(value = "-90.0")

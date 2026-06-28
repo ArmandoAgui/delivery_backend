@@ -22,8 +22,8 @@ public class DeliveryMapper {
         String restaurantAddress = order.getRestaurant() == null
                 ? null
                 : order.getRestaurant().getStreetAddress() + ", "
-                + order.getRestaurant().getCity() + ", "
-                + order.getRestaurant().getCountry();
+                + order.getRestaurant().getDepartment() + ", "
+                + DEFAULT_COUNTRY;
         String summary = order.getItems() == null || order.getItems().isEmpty()
                 ? "Order " + order.getId()
                 : order.getItems().stream()

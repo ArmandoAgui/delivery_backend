@@ -34,7 +34,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
             where r.active = true
               and (
                     lower(r.name) like lower(concat('%', :query, '%'))
-                 or lower(r.city) like lower(concat('%', :query, '%'))
+                 or lower(r.department) like lower(concat('%', :query, '%'))
                  or lower(coalesce(r.description, '')) like lower(concat('%', :query, '%'))
               )
             order by r.name asc
@@ -45,7 +45,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
             select r
             from Restaurant r
             where lower(r.name) like lower(concat('%', :query, '%'))
-               or lower(r.city) like lower(concat('%', :query, '%'))
+               or lower(r.department) like lower(concat('%', :query, '%'))
                or lower(coalesce(r.description, '')) like lower(concat('%', :query, '%'))
             order by r.active desc, r.name asc
             """)

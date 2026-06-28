@@ -110,7 +110,7 @@ public class RestaurantController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Buscar restaurantes por texto", description = "Busca por nombre, ciudad o descripcion.")
+    @Operation(summary = "Buscar restaurantes por texto", description = "Busca por nombre, departamento o descripcion.")
     public List<RestaurantResponseDTO> search(@RequestParam(name = "q", required = false) String query) {
         return restaurantService.search(query);
     }

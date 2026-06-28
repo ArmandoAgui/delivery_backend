@@ -86,8 +86,7 @@ class RestaurantServiceImplTest {
         assertThat(restaurantCaptor.getValue().getOwner()).isSameAs(owner);
         assertThat(restaurantCaptor.getValue().getName()).isEqualTo("Pupuseria Central");
         assertThat(restaurantCaptor.getValue().getStreetAddress()).isEqualTo("Boulevard Los Proceres");
-        assertThat(restaurantCaptor.getValue().getCity()).isEqualTo("San Salvador");
-        assertThat(restaurantCaptor.getValue().getCountry()).isEqualTo("El Salvador");
+        assertThat(restaurantCaptor.getValue().getDepartment()).isEqualTo("San Salvador");
         assertThat(restaurantCaptor.getValue().getLocation().getY()).isEqualTo(13.6929);
         assertThat(restaurantCaptor.getValue().getLocation().getX()).isEqualTo(-89.2182);
         assertThat(restaurantCaptor.getValue().isOpen()).isFalse();
@@ -262,9 +261,7 @@ class RestaurantServiceImplTest {
         restaurant.setPhone("2222-3333");
         restaurant.setEmail("restaurante@example.com");
         restaurant.setStreetAddress("Boulevard Los Proceres");
-        restaurant.setCity("San Salvador");
-        restaurant.setState("San Salvador");
-        restaurant.setCountry("El Salvador");
+        restaurant.setDepartment("San Salvador");
         restaurant.setLocation(RestaurantMapper.toLocation(13.6929, -89.2182));
         restaurant.setOpen(open);
         restaurant.setActive(active);
@@ -287,8 +284,7 @@ class RestaurantServiceImplTest {
         request.setPhone("2222-3333");
         request.setEmail("restaurante@example.com");
         request.setStreetAddress("Boulevard Los Proceres");
-        request.setCity("San Salvador");
-        request.setState("San Salvador");
+        request.setDepartment("San Salvador");
         request.setLatitude(13.6929);
         request.setLongitude(-89.2182);
     }
@@ -298,8 +294,7 @@ class RestaurantServiceImplTest {
         request.setPhone("2222-3333");
         request.setEmail("restaurante@example.com");
         request.setStreetAddress("Boulevard Los Proceres");
-        request.setCity("San Salvador");
-        request.setState("San Salvador");
+        request.setDepartment("San Salvador");
         request.setLatitude(13.6929);
         request.setLongitude(-89.2182);
     }

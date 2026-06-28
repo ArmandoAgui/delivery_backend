@@ -57,8 +57,7 @@ class RestaurantControllerTest {
                                   "phone":"2222-3333",
                                   "email":"comedor@example.com",
                                   "streetAddress":"Boulevard Los Proceres",
-                                  "city":"San Salvador",
-                                  "state":"San Salvador",
+                                  "department":"San Salvador",
                                   "latitude":13.6929,
                                   "longitude":-89.2182,
                                   "open":true
@@ -69,8 +68,7 @@ class RestaurantControllerTest {
                 .andExpect(jsonPath("$.ownerId").value(ownerId.toString()))
                 .andExpect(jsonPath("$.name").value("Comedor Central"))
                 .andExpect(jsonPath("$.streetAddress").value("Boulevard Los Proceres"))
-                .andExpect(jsonPath("$.city").value("San Salvador"))
-                .andExpect(jsonPath("$.country").value("El Salvador"))
+                .andExpect(jsonPath("$.department").value("San Salvador"))
                 .andExpect(jsonPath("$.latitude").value(13.6929))
                 .andExpect(jsonPath("$.longitude").value(-89.2182))
                 .andExpect(jsonPath("$.open").value(true))
@@ -131,8 +129,7 @@ class RestaurantControllerTest {
                                   "phone":"2222-3333",
                                   "email":"comedor@example.com",
                                   "streetAddress":"Boulevard Los Proceres",
-                                  "city":"San Salvador",
-                                  "state":"San Salvador",
+                                  "department":"San Salvador",
                                   "latitude":13.6929,
                                   "longitude":-89.2182,
                                   "open":true
@@ -188,9 +185,7 @@ class RestaurantControllerTest {
                 .phone("2222-3333")
                 .email("comedor@example.com")
                 .streetAddress("Boulevard Los Proceres")
-                .city("San Salvador")
-                .state("San Salvador")
-                .country("El Salvador")
+                .department("San Salvador")
                 .latitude(13.6929)
                 .longitude(-89.2182)
                 .open(open)

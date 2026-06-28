@@ -51,9 +51,9 @@ public class DevSeedRunner implements ApplicationRunner {
                 on conflict (id) do nothing
                 """, "018f9000-0000-7000-8000-000000000101", "018f9000-0000-7000-8000-000000000002");
         jdbcTemplate.update("""
-                insert into restaurants (id, owner_user_id, name, description, phone, email, street_address, city, state, country, location, is_open, is_active)
+                insert into restaurants (id, owner_user_id, name, description, phone, email, street_address, department, location, is_open, is_active)
                 values (cast(? as uuid), cast(? as uuid), 'Restaurante Dev', 'Seed para pruebas end-to-end', '+50370000000', 'restaurante.dev.seed@example.com',
-                        'Boulevard Dev 500', 'San Salvador', 'San Salvador', 'El Salvador',
+                        'Boulevard Dev 500', 'San Salvador',
                         ST_SetSRID(ST_MakePoint(-89.2200, 13.6900), 4326)::geography, true, true)
                 on conflict (id) do nothing
                 """, "018f9000-0000-7000-8000-000000000201", "018f9000-0000-7000-8000-000000000003");

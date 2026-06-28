@@ -24,11 +24,7 @@ public class RestaurantResponseDTO {
 
     private String streetAddress;
 
-    private String city;
-
-    private String state;
-
-    private String country;
+    private String department;
 
     private Double latitude;
 

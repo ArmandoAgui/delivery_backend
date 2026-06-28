@@ -46,13 +46,7 @@ public class Restaurant {
     private String streetAddress;
 
     @Column(nullable = false, length = 120)
-    private String city;
-
-    @Column(length = 120)
-    private String state;
-
-    @Column(nullable = false, length = 120)
-    private String country;
+    private String department;
 
     @Column(nullable = false, columnDefinition = "GEOGRAPHY(Point, 4326)")
     private Point location;
