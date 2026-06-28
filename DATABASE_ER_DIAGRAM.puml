@@ -1,0 +1,532 @@
+@startuml DeliveryDatabaseER
+
+title Delivery - Diagrama Entidad Relacion (esquema final Flyway V1-V26)
+
+left to right direction
+hide methods
+skinparam linetype ortho
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam packageStyle rectangle
+skinparam backgroundColor #FCFAF4
+skinparam entity {
+  BackgroundColor #FFFFFF
+  BorderColor #315B4A
+  FontColor #17211C
+  HeaderBackgroundColor #DDEDE5
+}
+skinparam package {
+  BorderColor #A9B9AF
+  FontColor #315B4A
+}
+skinparam ArrowColor #64776D
+
+legend left
+  |= Marca |= Significado |
+  | * | Columna NOT NULL |
+  | PK | Llave primaria |
+  | FK | Llave foranea |
+  | UK | Restriccion unica |
+  | UUID | Identificador UUID v7 generado por la aplicacion |
+  | geography | PostGIS geography(Point,4326) |
+endlegend
+
+package "Identidad y acceso" #EEF5F1 {
+  entity "roles" as roles {
+    *id : BIGINT <<PK>>
+    --
+    *name : VARCHAR(50) <<UK>>
+    description : VARCHAR(255)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "users" as users {
+    *id : UUID <<PK>>
+    --
+    *role_id : BIGINT <<FK>>
+    *first_name : VARCHAR(100)
+    *last_name : VARCHAR(100)
+    *email : VARCHAR(150) <<UK>>
+    phone : VARCHAR(30) <<UK>>
+    *password_hash : VARCHAR(255)
+    *is_active : BOOLEAN
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "addresses" as addresses {
+    *id : UUID <<PK>>
+    --
+    *user_id : UUID <<FK>>
+    label : VARCHAR(80)
+    *street_address : VARCHAR(255)
+    *city : VARCHAR(120)
+    state : VARCHAR(120)
+    *location : GEOGRAPHY(Point,4326)
+    *is_default : BOOLEAN
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "refresh_tokens" as refresh_tokens {
+    *id : UUID <<PK>>
+    --
+    *user_id : UUID <<FK>>
+    *token : VARCHAR(120) <<UK>>
+    *expires_at : TIMESTAMPTZ
+    revoked_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+}
+
+package "Restaurantes y catalogo" #FFF4E5 {
+  entity "restaurants" as restaurants {
+    *id : UUID <<PK>>
+    --
+    *owner_user_id : UUID <<FK,UK>>
+    *name : VARCHAR(150) <<UK: name+department>>
+    description : TEXT
+    phone : VARCHAR(30)
+    email : VARCHAR(150)
+    *street_address : VARCHAR(255)
+    *department : VARCHAR(120) <<UK: name+department>>
+    *location : GEOGRAPHY(Point,4326)
+    image_url : VARCHAR(500)
+    *is_open : BOOLEAN
+    *is_active : BOOLEAN
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "restaurant_schedules" as restaurant_schedules {
+    *id : BIGINT <<PK>>
+    --
+    *restaurant_id : UUID <<FK,UK: restaurant+day>>
+    *day_of_week : SMALLINT <<UK: restaurant+day>>
+    opens_at : TIME
+    closes_at : TIME
+    *is_closed : BOOLEAN
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "categories" as categories {
+    *id : BIGINT <<PK>>
+    --
+    *restaurant_id : UUID <<FK,UK: restaurant+name>>
+    *name : VARCHAR(100) <<UK: restaurant+name>>
+    description : VARCHAR(255)
+    *is_active : BOOLEAN
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "products" as products {
+    *id : UUID <<PK>>
+    --
+    *restaurant_id : UUID <<FK,UK: restaurant+name>>
+    *category_id : BIGINT <<FK>>
+    *name : VARCHAR(150) <<UK: restaurant+name>>
+    description : TEXT
+    *price : NUMERIC(10,2)
+    image_url : VARCHAR(500)
+    *is_available : BOOLEAN
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "promotions" as promotions {
+    *id : BIGINT <<PK>>
+    --
+    *restaurant_id : UUID <<FK>>
+    *title : VARCHAR(150)
+    description : VARCHAR(500)
+    *discount_percentage : INTEGER
+    *active : BOOLEAN
+    *start_date : DATE
+    *end_date : DATE
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "restaurant_commissions" as restaurant_commissions {
+    *id : BIGINT <<PK>>
+    --
+    *restaurant_id : UUID <<FK>>
+    *commission_percentage : NUMERIC(5,2)
+    *starts_at : TIMESTAMPTZ
+    ends_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+}
+
+package "Carrito, pedidos y pagos" #EDF3FA {
+  entity "carts" as carts {
+    *id : UUID <<PK>>
+    --
+    *customer_user_id : UUID <<FK>>
+    *restaurant_id : UUID <<FK>>
+    *status : VARCHAR(30)
+    expires_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "cart_items" as cart_items {
+    *id : UUID <<PK>>
+    --
+    *cart_id : UUID <<FK,UK: cart+product>>
+    *product_id : UUID <<FK,UK: cart+product>>
+    *quantity : INTEGER
+    *unit_price : NUMERIC(10,2)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "orders" as orders {
+    *id : UUID <<PK>>
+    --
+    *customer_user_id : UUID <<FK>>
+    *restaurant_id : UUID <<FK>>
+    *delivery_address_id : UUID <<FK>>
+    coupon_id : BIGINT <<FK>>
+    *status : VARCHAR(40)
+    *subtotal_amount : NUMERIC(10,2)
+    *delivery_fee : NUMERIC(10,2)
+    *tax_amount : NUMERIC(10,2)
+    *tip_amount : NUMERIC(10,2)
+    *discount_amount : NUMERIC(10,2)
+    *total_amount : NUMERIC(10,2)
+    distance_km : NUMERIC(10,2)
+    estimated_delivery_minutes : INTEGER
+    *demand_multiplier : NUMERIC(5,2)
+    notes : VARCHAR(500)
+    confirmed_at : TIMESTAMPTZ
+    cancelled_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "order_items" as order_items {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK,UK: order+product>>
+    *product_id : UUID <<FK,UK: order+product>>
+    *product_name : VARCHAR(150)
+    *quantity : INTEGER
+    *unit_price : NUMERIC(10,2)
+    *line_total : NUMERIC(10,2)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "order_status_history" as order_status_history {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK>>
+    changed_by_user_id : UUID <<FK>>
+    previous_status : VARCHAR(40)
+    *new_status : VARCHAR(40)
+    notes : VARCHAR(500)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "coupons" as coupons {
+    *id : BIGINT <<PK>>
+    --
+    *code : VARCHAR(50) <<UK>>
+    description : VARCHAR(255)
+    *discount_type : VARCHAR(20)
+    *discount_value : NUMERIC(10,2)
+    *minimum_order_amount : NUMERIC(10,2)
+    max_discount_amount : NUMERIC(10,2)
+    usage_limit : INTEGER
+    *used_count : INTEGER
+    *starts_at : TIMESTAMPTZ
+    *expires_at : TIMESTAMPTZ
+    *is_active : BOOLEAN
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "coupon_redemptions" as coupon_redemptions {
+    *id : UUID <<PK>>
+    --
+    *coupon_id : BIGINT <<FK,UK: coupon+order>>
+    *order_id : UUID <<FK,UK: coupon+order>>
+    *customer_user_id : UUID <<FK>>
+    *discount_amount : NUMERIC(10,2)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "payments" as payments {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK>>
+    *provider : VARCHAR(40)
+    provider_transaction_id : VARCHAR(150) <<UK>>
+    *status : VARCHAR(40)
+    *amount : NUMERIC(10,2)
+    *currency : CHAR(3)
+    paid_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "invoices" as invoices {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK,UK>>
+    payment_id : UUID <<FK>>
+    *invoice_number : VARCHAR(80) <<UK>>
+    *subtotal_amount : NUMERIC(10,2)
+    *tax_amount : NUMERIC(10,2)
+    *total_amount : NUMERIC(10,2)
+    *issued_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+}
+
+package "Delivery y geolocalizacion" #F0F4E6 {
+  entity "delivery_profiles" as delivery_profiles {
+    *delivery_user_id : UUID <<PK,FK>>
+    --
+    *is_available : BOOLEAN
+    *updated_at : TIMESTAMPTZ
+  }
+
+  entity "delivery_assignments" as delivery_assignments {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK,UK>>
+    *delivery_user_id : UUID <<FK>>
+    *status : VARCHAR(40)
+    *assigned_at : TIMESTAMPTZ
+    picked_up_at : TIMESTAMPTZ
+    delivered_at : TIMESTAMPTZ
+    *delivery_gross_earnings : NUMERIC(10,2)
+    *delivery_platform_commission_percentage : NUMERIC(5,2)
+    *delivery_platform_commission_amount : NUMERIC(10,2)
+    *delivery_net_earnings : NUMERIC(10,2)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "delivery_assignment_rejections" as delivery_assignment_rejections {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK,UK: order+driver>>
+    *delivery_user_id : UUID <<FK,UK: order+driver>>
+    *rejected_at : TIMESTAMPTZ
+    reason : VARCHAR(255)
+  }
+
+  entity "delivery_batches" as delivery_batches {
+    *id : UUID <<PK>>
+    --
+    *delivery_user_id : UUID <<FK>>
+    *status : VARCHAR(40)
+    started_at : TIMESTAMPTZ
+    completed_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "delivery_batch_orders" as delivery_batch_orders {
+    *id : UUID <<PK>>
+    --
+    *delivery_batch_id : UUID <<FK,UK: batch+sequence>>
+    *order_id : UUID <<FK,UK>>
+    *sequence_number : INTEGER <<UK: batch+sequence>>
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "delivery_locations" as delivery_locations {
+    *id : UUID <<PK>>
+    --
+    *delivery_user_id : UUID <<FK>>
+    order_id : UUID <<FK>>
+    delivery_batch_id : UUID <<FK>>
+    *location : GEOGRAPHY(Point,4326)
+    *recorded_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+}
+
+package "Experiencia, soporte y fidelidad" #F9EEF2 {
+  entity "reviews" as reviews {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK>>
+    *reviewer_user_id : UUID <<FK>>
+    *restaurant_id : UUID <<FK>>
+    delivery_user_id : UUID <<FK>>
+    product_id : UUID <<FK>>
+    *review_type : VARCHAR(30)
+    *rating : INTEGER
+    comment : TEXT
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "complaints" as complaints {
+    *id : UUID <<PK>>
+    --
+    *order_id : UUID <<FK,UK>>
+    *customer_user_id : UUID <<FK>>
+    assigned_admin_user_id : UUID <<FK>>
+    *status : VARCHAR(40)
+    *subject : VARCHAR(150)
+    *description : TEXT
+    resolution : TEXT
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "refunds" as refunds {
+    *id : UUID <<PK>>
+    --
+    *payment_id : UUID <<FK>>
+    complaint_id : UUID <<FK>>
+    *status : VARCHAR(40)
+    *amount : NUMERIC(10,2)
+    *reason : VARCHAR(500)
+    processed_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "loyalty_accounts" as loyalty_accounts {
+    *id : UUID <<PK>>
+    --
+    *customer_user_id : UUID <<FK,UK>>
+    *points_balance : INTEGER
+    *credit_balance : NUMERIC(12,2)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "loyalty_transactions" as loyalty_transactions {
+    *id : UUID <<PK>>
+    --
+    *loyalty_account_id : UUID <<FK>>
+    order_id : UUID <<FK>>
+    *transaction_type : VARCHAR(30)
+    *points : INTEGER
+    *credit_amount : NUMERIC(12,2)
+    description : VARCHAR(255)
+    *created_at : TIMESTAMPTZ
+  }
+
+  entity "platform_commissions" as platform_commissions {
+    *id : BIGINT <<PK>>
+    --
+    *commission_percentage : NUMERIC(5,2)
+    *delivery_commission_percentage : NUMERIC(5,2)
+    *starts_at : TIMESTAMPTZ
+    ends_at : TIMESTAMPTZ
+    *created_at : TIMESTAMPTZ
+  }
+}
+
+' Identity relationships
+roles ||--o{ users : "role_id"
+users ||--o{ addresses : "user_id"
+users ||--o{ refresh_tokens : "user_id"
+
+' Restaurant and catalog relationships
+users ||--o| restaurants : "owner_user_id"
+restaurants ||--o{ restaurant_schedules : "restaurant_id"
+restaurants ||--o{ categories : "restaurant_id"
+restaurants ||--o{ products : "restaurant_id"
+categories ||--o{ products : "category_id + restaurant_id"
+restaurants ||--o{ promotions : "restaurant_id"
+restaurants ||--o{ restaurant_commissions : "restaurant_id"
+
+' Cart and order relationships
+users ||--o{ carts : "customer_user_id"
+restaurants ||--o{ carts : "restaurant_id"
+carts ||--o{ cart_items : "cart_id"
+products ||--o{ cart_items : "product_id"
+
+users ||--o{ orders : "customer_user_id"
+restaurants ||--o{ orders : "restaurant_id"
+addresses ||--o{ orders : "delivery_address_id"
+coupons |o--o{ orders : "coupon_id"
+orders ||--o{ order_items : "order_id"
+products ||--o{ order_items : "product_id"
+orders ||--o{ order_status_history : "order_id"
+users |o--o{ order_status_history : "changed_by_user_id"
+orders ||--o{ payments : "order_id"
+orders ||--o| invoices : "order_id"
+payments |o--o{ invoices : "payment_id"
+coupons ||--o{ coupon_redemptions : "coupon_id"
+orders ||--o{ coupon_redemptions : "order_id"
+users ||--o{ coupon_redemptions : "customer_user_id"
+
+' Delivery relationships
+users ||--o| delivery_profiles : "delivery_user_id"
+orders ||--o| delivery_assignments : "order_id"
+users ||--o{ delivery_assignments : "delivery_user_id"
+orders ||--o{ delivery_assignment_rejections : "order_id"
+users ||--o{ delivery_assignment_rejections : "delivery_user_id"
+users ||--o{ delivery_batches : "delivery_user_id"
+delivery_batches ||--o{ delivery_batch_orders : "delivery_batch_id"
+orders ||--o| delivery_batch_orders : "order_id"
+users ||--o{ delivery_locations : "delivery_user_id"
+orders |o--o{ delivery_locations : "order_id"
+delivery_batches |o--o{ delivery_locations : "delivery_batch_id"
+
+' Reviews, complaints, refunds and loyalty relationships
+orders ||--o{ reviews : "order_id"
+users ||--o{ reviews : "reviewer_user_id"
+restaurants ||--o{ reviews : "restaurant_id"
+users |o--o{ reviews : "delivery_user_id"
+products |o--o{ reviews : "product_id"
+
+orders ||--o| complaints : "order_id"
+users ||--o{ complaints : "customer_user_id"
+users |o--o{ complaints : "assigned_admin_user_id"
+payments ||--o{ refunds : "payment_id"
+complaints |o--o{ refunds : "complaint_id"
+
+users ||--o| loyalty_accounts : "customer_user_id"
+loyalty_accounts ||--o{ loyalty_transactions : "loyalty_account_id"
+orders |o--o{ loyalty_transactions : "order_id"
+
+note right of orders
+  Estados finales:
+  CREATED, CONFIRMED,
+  WAITING_FOR_DRIVER,
+  NO_DRIVER_AVAILABLE, REJECTED,
+  PREPARING, READY_FOR_PICKUP,
+  ON_THE_WAY, DELIVERED, CANCELLED
+end note
+
+note right of delivery_assignments
+  Estados:
+  OFFERED, ASSIGNED, REJECTED,
+  PICKED_UP, ON_THE_WAY,
+  DELIVERED, CANCELLED
+
+  Las ganancias guardan un snapshot
+  de la comision vigente al entregar.
+end note
+
+note bottom of reviews
+  review_type:
+  RESTAURANT, PRODUCT, DELIVERY
+
+  Indices unicos parciales evitan
+  calificaciones duplicadas por
+  pedido, usuario, tipo y producto.
+end note
+
+note bottom of coupons
+  discount_type:
+  PERCENTAGE, FIXED
+
+  Los cupones son financiados
+  por la plataforma.
+end note
+
+note bottom of addresses
+  Las direcciones de cliente ya no
+  almacenan country ni postal_code.
+  El Salvador es el alcance funcional.
+end note
+
+note bottom of restaurants
+  La ubicacion administrativa usa
+  unicamente department.
+  El Salvador es el alcance funcional.
+end note
+
+note bottom of platform_commissions
+  Configuracion global versionada
+  por starts_at/ends_at.
+  No tiene FK: aplica por vigencia.
+end note
+
+@enduml
