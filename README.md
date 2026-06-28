@@ -1,233 +1,257 @@
 # Delivery Backend
 
-Backend para una plataforma de delivery de comida donde restaurantes publican productos, clientes realizan pedidos y repartidores reciben asignaciones segun cercania. El proyecto esta construido con Spring Boot, PostgreSQL/PostGIS, Flyway y una API REST documentable con OpenAPI.
+Backend de una plataforma de delivery de comida construida con Spring Boot, PostgreSQL/PostGIS, Flyway, JWT, Docker y OpenAPI.
 
-> Estado actual: el repositorio contiene la base del modelo de negocio, migraciones completas para la base de datos y el modulo de asignacion/seguimiento de repartidores. La autenticacion real todavia esta en modo desarrollo: Spring Security permite las peticiones y `AuthenticatedUserProvider` resuelve el usuario actual desde `X-Dev-User-Id` o desde `DEV_DELIVERY_USER_ID`.
+El proyecto soporta los flujos principales del negocio:
 
-## Objetivo del Proyecto
+- clientes que buscan restaurantes, agregan productos al carrito, pagan y siguen pedidos;
+- restaurantes que administran su catalogo, horarios, imagenes y pedidos;
+- repartidores que reciben asignaciones automaticas, avanzan estados y reportan su ubicacion;
+- administradores que gestionan usuarios, reclamos, cupones, comisiones y reportes.
 
-El sistema responde a la tematica **Servicio de Delivery de Comida**:
+## Estado Actual
 
-- restaurantes administran menus, precios y horarios;
-- usuarios compran comida para entrega a domicilio;
-- repartidores reciben pedidos y actualizan el estado de la entrega;
-- administradores gestionan usuarios, reclamos y comisiones.
+El backend ya integra:
 
-Tambien se dejo preparada la estructura de datos para cupones, fidelidad, facturacion, reclamos, reembolsos, agrupacion de pedidos y pagos simulados/Stripe.
+- arquitectura N-capas;
+- autenticacion con JWT y refresh tokens persistentes;
+- PostgreSQL con PostGIS para geolocalizacion;
+- calculo de envio y ETA;
+- carrito y pedido con recalculo seguro desde el backend;
+- delivery automatico con asignacion por cercania;
+- reclamos, reembolsos, fidelidad, monedero digital y calificaciones;
+- carga de imagenes optimizadas para restaurantes y productos;
+- documentacion Swagger/OpenAPI;
+- despliegue con Docker Compose para desarrollo y EC2.
 
 ## Tecnologias
 
 - Java 25
-- Spring Boot 4.0.6
+- Spring Boot 4
 - Spring Web MVC
 - Spring Data JPA / Hibernate
 - Spring Security
 - Bean Validation
-- PostgreSQL con PostGIS
+- PostgreSQL 16 + PostGIS 3.4
 - Flyway
 - Springdoc OpenAPI
+- HikariCP
 - Maven Wrapper
 - JUnit 5, Mockito, MockMvc
 
+## Estructura General
+
+La aplicacion sigue una arquitectura N-capas:
+
+```text
+controller -> service -> repository -> entity/database
+```
+
+Los contratos HTTP se manejan con DTOs y los errores se centralizan en un handler global.
+
+### Capas principales
+
+- `controller`: expone endpoints REST y valida entrada.
+- `service`: contiene reglas de negocio y transacciones.
+- `repository`: consultas JPA y SQL especializadas.
+- `entity`: modelo persistente.
+- `dto`: request/response del API.
+- `mapper`: conversion entre entidades y DTOs.
+- `security`: JWT, filtros y autorizacion por rol.
+- `exception`: manejo uniforme de errores.
+
+## Arquitectura De Despliegue
+
+La version productiva corre en una sola instancia EC2 con Docker Compose:
+
+- Nginx como entrada publica.
+- Backend Spring Boot interno.
+- Frontend React interno.
+- PostgreSQL + PostGIS con volumen persistente.
+- Certbot + Let’s Encrypt para HTTPS.
+
+### Flujo de red
+
+```text
+Internet -> Nginx -> Frontend
+Internet -> Nginx -> /api -> Backend
+Internet -> Nginx -> /uploads -> Backend
+Internet -> Nginx -> /swagger-ui y /v3/api-docs -> Backend
+```
+
+No se exponen directamente PostgreSQL ni el puerto interno del backend.
+
+## Ejecucion Local
+
+### 1. Requisitos
+
+- Java 25
+- Maven Wrapper
+- Docker y Docker Compose
+- PostgreSQL con PostGIS si no usas Docker
+
+### 2. Variables necesarias
+
+El proyecto lee variables desde `.env` o desde el entorno del sistema.
+
+### 3. Compilar
+
+```bash
+./mvnw clean test
+```
+
+### 4. Ejecutar
+
+```bash
+./mvnw spring-boot:run
+```
+
+### 5. Swagger
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
 ## Docker
 
-El backend puede construirse y ejecutarse como una imagen Docker independiente. La imagen no incluye base de datos; esta debe proveerse externamente, por ejemplo desde PostgreSQL/PostGIS local, un servicio administrado o un repositorio futuro de despliegue con Docker Compose, Nginx/Traefik y frontend.
+### Imagen del backend
 
-## Docker Compose Local
-
-El repositorio incluye un `docker-compose.yml` para levantar el stack completo en
-desarrollo:
-
-- PostgreSQL 16 con PostGIS.
-- Backend Spring Boot.
-- Frontend React servido por Nginx desde `../delivery_frontend`.
-
-Levantar todo:
-
-```bash
-docker compose up --build
-```
-
-Requiere Docker Compose V2 (`docker compose`). Si tu instalacion solo tiene el
-binario antiguo `docker-compose`, instala el plugin oficial de Compose antes de
-usar este archivo.
-
-Abrir:
-
-```text
-Frontend: http://localhost:5173
-Backend:  http://localhost:8080
-Swagger:  http://localhost:8080/swagger-ui.html
-DB host:  localhost:5434
-```
-
-La base de datos queda persistida en el volumen Docker:
-
-```text
-delivery_postgres_data
-```
-
-Para apagar sin borrar datos:
-
-```bash
-docker compose down
-```
-
-Para borrar tambien la base local dockerizada:
-
-```bash
-docker compose down -v
-```
-
-Si necesitas cambiar puertos o credenciales:
-
-```bash
-cp compose.env.example compose.env
-docker compose --env-file compose.env up --build
-```
-
-Por defecto el compose usa:
-
-```text
-POSTGRES_DB=delivery
-POSTGRES_USER=delivery
-POSTGRES_PASSWORD=delivery
-POSTGRES_PORT=5434
-```
-
-> Nota: se usa `5434` en el host para no chocar con tu PostgreSQL local actual
-> en `5433`. Dentro de Docker el backend se conecta a `db:5432`.
-
-## Docker Compose En AWS EC2
-
-Para una instancia EC2 de una sola maquina se incluye
-`docker-compose.aws.yml`. Este archivo levanta:
-
-- Nginx publico en el puerto `80`.
-- Frontend React en red interna.
-- Backend Spring Boot en red interna.
-- PostgreSQL/PostGIS persistido en volumen Docker.
-
-Preparar variables:
-
-```bash
-cp deploy/aws.env.example aws.env
-```
-
-Editar `aws.env` y cambiar al menos:
-
-```text
-POSTGRES_PASSWORD=<password-fuerte>
-JWT_SECRET=<secreto-largo-y-privado>
-CORS_ALLOWED_ORIGINS=http://<IP_PUBLICA_EC2>
-```
-
-Levantar el stack desde este repositorio, dejando el frontend como repositorio
-hermano llamado `delivery_frontend`:
-
-```bash
-docker compose --env-file aws.env -f docker-compose.aws.yml up -d --build
-```
-
-Verificar:
-
-```bash
-docker compose --env-file aws.env -f docker-compose.aws.yml ps
-docker compose --env-file aws.env -f docker-compose.aws.yml logs --tail=100
-curl http://localhost/
-curl http://localhost/api/auth/me
-```
-
-En AWS solo debe exponerse publicamente el puerto `80` y mantenerse `22` para
-SSH. PostgreSQL y Spring Boot no se publican al host en este compose.
-
-### Base De Datos En Render
-
-Para Render, lo recomendado es usar una base PostgreSQL administrada compatible
-con PostGIS y configurar el backend con variables de entorno:
-
-```text
-DB_URL=jdbc:postgresql://<host-render>:5432/<database>?sslmode=require
-DB_USER=<usuario-render>
-DB_PASSWORD=<password-render>
-DEV_SEED_ENABLED=false
-JWT_SECRET=<secreto-fuerte>
-CORS_ALLOWED_ORIGINS=https://<frontend-render>.onrender.com
-```
-
-El contenedor de base de datos del `docker-compose.yml` es para desarrollo local.
-En Render no conviene depender de un contenedor PostgreSQL efimero sin volumen
-persistente administrado, porque podrias perder datos al redeploy.
-
-### Construir Imagen
+El backend puede construirse como imagen independiente.
 
 ```bash
 docker build -t delivery-backend:local .
 ```
 
-### Ejecutar Contenedor
+### Ejecutar con Docker
 
-Ejemplo usando PostgreSQL/PostGIS local expuesto en `localhost:5433`:
+Ejemplo con variables de entorno:
 
 ```bash
 docker run --rm \
   --name delivery-backend \
-  --network host \
-  -e SERVER_PORT=8080 \
-  -e DB_URL=jdbc:postgresql://localhost:5433/postgres \
-  -e DB_USER=armando \
-  -e DB_PASSWORD=1234 \
-  -e JWT_SECRET=delivery-development-secret-key-change-before-production-0123456789 \
-  -e DEV_SEED_ENABLED=true \
+  -e DB_URL=jdbc:postgresql://localhost:5432/delivery \
+  -e DB_USER=delivery \
+  -e DB_PASSWORD=delivery \
+  -e JWT_SECRET=change-this-secret \
+  -e DEV_SEED_ENABLED=false \
   delivery-backend:local
 ```
 
-Si se prefiere usar archivo de variables:
+## Docker Compose
+
+### Desarrollo local
+
+El repositorio incluye un `docker-compose.yml` para levantar el stack completo:
+
+- PostgreSQL 16 + PostGIS
+- Backend Spring Boot
+- Frontend React servido por Nginx
 
 ```bash
-cp docker.env.example docker.env
-docker run --rm --name delivery-backend --network host --env-file docker.env delivery-backend:local
+docker compose up --build
 ```
 
-> Nota: `docker.env` esta ignorado por Git para evitar subir secretos locales.
+Puertos locales:
 
-### Variables De Entorno
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger-ui/index.html`
 
-| Variable | Requerida | Descripcion | Ejemplo |
-| --- | --- | --- | --- |
-| `DB_URL` | Si | URL JDBC de PostgreSQL/PostGIS. | `jdbc:postgresql://db:5432/delivery` |
-| `DB_USER` | Si | Usuario de base de datos. | `delivery_user` |
-| `DB_PASSWORD` | Si | Password de base de datos. | `change-me` |
-| `SERVER_PORT` | No | Puerto interno del backend. | `8080` |
-| `SPRING_PROFILES_ACTIVE` | No | Perfil activo de Spring. | `prod` |
-| `JWT_SECRET` | Si en produccion | Secreto para firmar JWT. Debe ser fuerte y privado. | `change-this-secret` |
-| `JWT_ACCESS_TOKEN_MINUTES` | No | Minutos de vida del access token. | `60` |
-| `JWT_REFRESH_TOKEN_DAYS` | No | Dias de vida del refresh token. | `14` |
-| `CORS_ALLOWED_ORIGINS` | No | Origenes frontend permitidos separados por coma. | `https://app.example.com,http://localhost:5173` |
-| `DEV_SEED_ENABLED` | No | Activa seed de desarrollo. Usar `false` en produccion. | `false` |
-| `DEV_DELIVERY_USER_ID` | No | Usuario dev de fallback si aplica. | `018f...0003` |
-| `FLYWAY_BASELINE_ON_MIGRATE` | No | Baseline para esquemas existentes. | `false` |
-| `FLYWAY_BASELINE_VERSION` | No | Version de baseline Flyway. | `0` |
-| `DB_POOL_MAX_SIZE` | No | Maximo de conexiones HikariCP. | `10` |
-| `DB_POOL_MIN_IDLE` | No | Minimo de conexiones idle. | `2` |
-| `DB_CONNECTION_TIMEOUT_MS` | No | Timeout de conexion. | `30000` |
-| `DB_IDLE_TIMEOUT_MS` | No | Timeout idle. | `600000` |
-| `DB_MAX_LIFETIME_MS` | No | Vida maxima de conexion. | `1800000` |
-| `JAVA_OPTS` | No | Opciones JVM del contenedor. | `-XX:MaxRAMPercentage=75.0` |
+### Produccion en EC2
 
-### Puertos
+Tambien existe `docker-compose.aws.yml`, pensado para una sola instancia EC2.
 
-- Backend HTTP: `8080` por defecto.
-- Swagger UI: `/swagger-ui.html`.
-- OpenAPI JSON: `/v3/api-docs`.
+Levanta:
 
-### Persistencia De Archivos
+- `delivery-nginx`
+- `delivery-frontend`
+- `delivery-backend`
+- `delivery-db`
 
-El backend guarda imagenes optimizadas de restaurantes y productos en disco, no
-en la base de datos. La base solo almacena la ruta relativa, por ejemplo
-`/uploads/products/product-<uuid>.webp`.
+Ejemplo:
 
-Variables relevantes:
+```bash
+cp .env.example .env
+docker compose -f docker-compose.aws.yml --env-file .env up -d --build
+```
+
+## Variables De Entorno
+
+Variables mas importantes:
+
+| Variable | Descripcion |
+| --- | --- |
+| `DB_URL` | URL JDBC de PostgreSQL/PostGIS |
+| `DB_USER` | Usuario de base de datos |
+| `DB_PASSWORD` | Contrasena de base de datos |
+| `JWT_SECRET` | Secreto para firmar tokens |
+| `JWT_ACCESS_TOKEN_MINUTES` | Vida del access token |
+| `JWT_REFRESH_TOKEN_DAYS` | Vida del refresh token |
+| `CORS_ALLOWED_ORIGINS` | Origenes permitidos del frontend |
+| `DEV_SEED_ENABLED` | Activa datos de desarrollo |
+| `DEV_DELIVERY_USER_ID` | Usuario fallback para desarrollo |
+| `DB_POOL_MAX_SIZE` | Tamano maximo del pool HikariCP |
+| `DB_POOL_MIN_IDLE` | Minimo de conexiones ociosas |
+| `DB_CONNECTION_TIMEOUT_MS` | Timeout de conexion |
+| `DB_IDLE_TIMEOUT_MS` | Timeout idle |
+| `DB_MAX_LIFETIME_MS` | Vida maxima de una conexion |
+| `DB_KEEPALIVE_TIME_MS` | Keepalive para conexiones largas |
+| `UPLOADS_ROOT_PATH` | Carpeta local de imagenes |
+| `UPLOADS_PUBLIC_PATH` | Ruta publica de imagenes |
+| `UPLOADS_MAX_FILE_SIZE_BYTES` | Tamano maximo de carga |
+| `UPLOADS_RESTAURANT_MAX_WIDTH` | Ancho maximo de restaurante |
+| `UPLOADS_PRODUCT_MAX_WIDTH` | Ancho maximo de producto |
+| `UPLOADS_IMAGE_QUALITY` | Calidad WebP |
+
+## Pool De Conexiones
+
+La configuracion actual de HikariCP esta optimizada para una instancia EC2 con mas capacidad de concurrencia:
+
+```yaml
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 20
+      connection-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
+      validation-timeout: 5000
+```
+
+## Geolocalizacion
+
+Se usa PostGIS con `GEOGRAPHY(Point,4326)` para:
+
+- ubicar restaurantes y direcciones;
+- calcular cercania;
+- elegir repartidor mas cercano;
+- estimar costo de envio y tiempo.
+
+### Puntos clave
+
+- las coordenadas se capturan con el frontend;
+- el backend valida y persiste el `Point`;
+- las consultas espaciales se hacen en PostgreSQL/PostGIS;
+- el calculo no depende de la distancia “plana”, sino de consultas geoespaciales.
+
+## Imagenes
+
+Las imagenes de restaurantes y productos:
+
+- se almacenan en disco;
+- se convierten a WebP;
+- se redimensionan antes de guardar;
+- no se guardan como BLOB en la base de datos.
+
+### Rutas habituales
+
+```text
+/uploads/restaurants/restaurant-<uuid>.webp
+/uploads/products/product-<uuid>.webp
+```
+
+### Variables utiles
 
 ```text
 UPLOADS_ROOT_PATH=/app/uploads
@@ -238,350 +262,126 @@ UPLOADS_PRODUCT_MAX_WIDTH=800
 UPLOADS_IMAGE_QUALITY=0.82
 ```
 
-En Docker Compose se usa el volumen `delivery_uploads` montado en
-`/app/uploads`. No borrar ese volumen si se quieren preservar las imagenes.
+## Reglas De Negocio Principales
 
-### Preparacion Para Deploy
+### Clientes
 
-La imagen queda lista para integrarse despues en un repositorio `deploy` con:
+- registro y login;
+- carrito y checkout;
+- uso de cupones;
+- uso de monedero digital;
+- reclamos y calificaciones;
+- seguimiento de pedidos;
+- descarga de factura.
 
-- PostgreSQL/PostGIS como servicio externo.
-- Frontend como servicio independiente.
-- Nginx o Traefik como reverse proxy.
-- Certificados TLS gestionados fuera del backend.
-- Variables sensibles inyectadas mediante secretos del entorno.
+### Restaurantes
 
-## Arquitectura
+- gestion de restaurante;
+- categorias y productos;
+- horarios;
+- imagenes;
+- confirmacion o rechazo de pedidos;
+- dashboard de estadisticas.
 
-El proyecto sigue una arquitectura por modulos de dominio:
+### Repartidores
 
-```text
-src/main/java/sv/edu/uca/delivery/backend
-├── address       # direcciones de usuarios
-├── auth          # roles
-├── common        # manejo global de errores
-├── delivery      # asignacion y ciclo de vida de entregas
-├── order         # pedidos
-├── restaurant    # restaurantes
-├── security      # usuario autenticado/configuracion de seguridad
-├── user          # usuarios
-└── util          # generador UUID v7
-```
+- reciben solicitudes automaticas;
+- ven solo sus entregas activas;
+- avanzan estados con una sola accion;
+- actualizan ubicacion;
+- reciben comision versionada por pedido.
 
-Capas usadas en el modulo `delivery`:
+### Administradores
 
-- `controller`: expone endpoints REST.
-- `dto`: define contratos de entrada/salida.
-- `service`: concentra reglas de negocio y transacciones.
-- `repository`: consultas JPA y geoespaciales.
-- `entity`: mapeo de tablas.
-- `exception`: errores de negocio con codigos HTTP.
-- `mapper`: conversion de entidades a respuestas.
-
-## Reglas de Negocio Implementadas
-
-Actualmente el backend implementa el nucleo de delivery:
-
-- asignacion automatica de un repartidor activo con rol `DELIVERY`;
-- busqueda del repartidor disponible mas cercano al restaurante usando PostGIS;
-- bloqueo pesimista de pedidos/asignaciones para evitar carreras en alta concurrencia;
-- validacion de pedidos cancelados o entregados antes de asignar;
-- prevencion de doble asignacion por pedido;
-- prevencion de asignar repartidores con entregas activas;
-- consulta de pedidos asignados al repartidor actual;
-- transiciones controladas de estado:
-  - `ASSIGNED -> PICKED_UP`
-  - `PICKED_UP -> ON_THE_WAY`
-  - `ON_THE_WAY -> DELIVERED`
-- actualizacion del estado del pedido cuando la entrega pasa a `ON_THE_WAY` o `DELIVERED`;
-- manejo uniforme de errores de validacion, negocio y recursos no encontrados.
-
-## Funcionalidades Modeladas en Base de Datos
-
-Las migraciones incluyen tablas e indices para cubrir la mayoria de la especificacion general:
-
-- roles y usuarios;
-- direcciones con ubicacion geografica;
-- restaurantes con ubicacion, estado y horarios;
-- categorias y productos de menu;
-- carritos y items de carrito;
-- pedidos, items y desglose monetario;
-- pagos simulados o Stripe;
-- asignaciones de delivery;
-- historial de estados del pedido;
-- tracking de ubicacion de repartidores;
-- pedidos agrupados por repartidor;
-- reviews/calificaciones;
+- gestion de usuarios;
+- activacion o desactivacion;
 - reclamos y reembolsos;
-- facturas;
-- cupones, redenciones y fidelidad;
-- comisiones por restaurante.
+- cupones;
+- comisiones;
+- reportes.
 
-## Roles
+## Endpoints Clave
 
-| Rol | Responsabilidad |
-| --- | --- |
-| `ADMIN` | Gestiona usuarios, reclamos y configuracion de comisiones. |
-| `CUSTOMER` | Busca restaurantes, crea pedidos, paga, califica y consulta historial. |
-| `RESTAURANT` | Administra restaurante, horarios, categorias, productos y pedidos recibidos. |
-| `DELIVERY` | Recibe asignaciones, actualiza estado y reporta ubicacion. |
+No es una lista exhaustiva, pero estos son los mas importantes:
 
-## Endpoints Actuales
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `GET /api/auth/me`
+- `POST /api/cart/items`
+- `GET /api/cart`
+- `POST /api/cart/quote`
+- `POST /api/orders`
+- `GET /api/orders/{id}/tracking`
+- `PATCH /api/orders/{id}/confirm`
+- `GET /api/deliveries/my-orders`
+- `PATCH /api/deliveries/{id}/status`
+- `GET /api/restaurants`
+- `GET /api/restaurants/nearby`
+- `GET /api/products/restaurant/{restaurantId}`
+- `POST /api/complaints`
+- `POST /api/reviews`
+- `GET /api/admin/reportes`
+- `GET /api/admin/users`
+- `POST /api/admin/coupons`
 
-Base path: `/api/deliveries`
-
-| Metodo | Endpoint | Descripcion | Respuesta |
-| --- | --- | --- | --- |
-| `POST` | `/assign` | Asigna automaticamente un repartidor cercano a un pedido. | `201 Created` |
-| `GET` | `/my-orders` | Lista las asignaciones del repartidor actual. | `200 OK` |
-| `PATCH` | `/{id}/status` | Actualiza el estado de una asignacion. | `200 OK` |
-
-### `POST /api/deliveries/assign`
-
-Request:
-
-```json
-{
-  "orderId": "018f0000-0000-7000-8000-000000000401"
-}
-```
-
-Response:
-
-```json
-{
-  "id": "018f0000-0000-7000-8000-000000000601",
-  "orderId": "018f0000-0000-7000-8000-000000000401",
-  "deliveryUserId": "018f0000-0000-7000-8000-000000000003",
-  "deliveryUserName": "Repartidor Cercano",
-  "status": "ASSIGNED",
-  "orderStatus": "READY_FOR_PICKUP",
-  "assignedAt": "2026-05-08T18:00:00",
-  "pickedUpAt": null,
-  "deliveredAt": null,
-  "createdAt": "2026-05-08T18:00:00"
-}
-```
-
-### `PATCH /api/deliveries/{id}/status`
-
-Request:
-
-```json
-{
-  "status": "PICKED_UP"
-}
-```
-
-Estados validos del delivery:
-
-- `ASSIGNED`
-- `PICKED_UP`
-- `ON_THE_WAY`
-- `DELIVERED`
-- `CANCELLED`
-
-Nota: `CANCELLED` existe en el modelo, pero este endpoint no permite cancelar asignaciones.
-
-## Codigos HTTP y Errores
-
-El backend usa `GlobalExceptionHandler` para entregar errores consistentes:
-
-| Caso | Codigo |
-| --- | --- |
-| Creacion de asignacion exitosa | `201 Created` |
-| Consulta/actualizacion exitosa | `200 OK` |
-| Body invalido o campos requeridos ausentes | `400 Bad Request` |
-| Pedido/asignacion no encontrada | `404 Not Found` |
-| Regla de negocio incumplida | `409 Conflict` |
-
-Formato de error:
-
-```json
-{
-  "timestamp": "2026-05-08T18:00:00",
-  "status": 409,
-  "error": "Conflict",
-  "message": "Order already has a delivery assignment",
-  "path": "/api/deliveries/assign",
-  "details": []
-}
-```
-
-## Base de Datos
-
-La base esta versionada con Flyway en:
-
-```text
-src/main/resources/db/migration
-```
-
-Migraciones principales:
-
-- `V1__init_schema.sql`: esquema inicial de delivery, productos, pedidos, pagos, reviews, reclamos y cupones.
-- `V2__extend_delivery_schema.sql`: carritos, horarios, tracking, agrupacion de pedidos, reembolsos, facturas, fidelidad y comisiones.
-- `V3__convert_transactional_ids_to_uuid_v7.sql`: conversion de tablas transaccionales a UUID generados por backend.
-- `V4__align_delivery_assignment_statuses.sql`: alinea estados de delivery con el modulo Java.
-
-Datos de prueba manuales:
-
-```text
-src/main/resources/db/seed/delivery_test_data.sql
-```
-
-## Diagrama Entidad-Relacion
-
-```mermaid
-erDiagram
-    ROLES ||--o{ USERS : assigns
-    USERS ||--o{ ADDRESSES : owns
-    USERS ||--o| RESTAURANTS : manages
-    RESTAURANTS ||--o{ RESTAURANT_SCHEDULES : opens
-    RESTAURANTS ||--o{ CATEGORIES : groups
-    RESTAURANTS ||--o{ PRODUCTS : offers
-    CATEGORIES ||--o{ PRODUCTS : contains
-    USERS ||--o{ CARTS : creates
-    CARTS ||--o{ CART_ITEMS : contains
-    PRODUCTS ||--o{ CART_ITEMS : selected
-    USERS ||--o{ ORDERS : places
-    RESTAURANTS ||--o{ ORDERS : receives
-    ADDRESSES ||--o{ ORDERS : destination
-    ORDERS ||--o{ ORDER_ITEMS : contains
-    PRODUCTS ||--o{ ORDER_ITEMS : snapshot
-    ORDERS ||--o| DELIVERY_ASSIGNMENTS : assigned
-    USERS ||--o{ DELIVERY_ASSIGNMENTS : delivers
-    USERS ||--o{ DELIVERY_LOCATIONS : reports
-    ORDERS ||--o{ ORDER_STATUS_HISTORY : tracks
-    USERS ||--o{ DELIVERY_BATCHES : handles
-    DELIVERY_BATCHES ||--o{ DELIVERY_BATCH_ORDERS : groups
-    ORDERS ||--o{ DELIVERY_BATCH_ORDERS : included
-    ORDERS ||--o{ PAYMENTS : pays
-    ORDERS ||--o{ REVIEWS : receives
-    ORDERS ||--o{ COMPLAINTS : reports
-    PAYMENTS ||--o{ REFUNDS : reverses
-    COMPLAINTS ||--o{ REFUNDS : justifies
-    ORDERS ||--o| INVOICES : bills
-    COUPONS ||--o{ COUPON_REDEMPTIONS : redeems
-    USERS ||--o{ LOYALTY_ACCOUNTS : has
-    LOYALTY_ACCOUNTS ||--o{ LOYALTY_TRANSACTIONS : records
-    RESTAURANTS ||--o{ RESTAURANT_COMMISSIONS : configures
-```
-
-## Escalabilidad
-
-El desafio plantea que la creacion de pedidos puede recibir hasta 10.000 pedidos por minuto y que el objeto pedido contiene partes opcionales: items, descuentos, propina, envio, impuestos y pagos.
-
-Decisiones ya presentes:
-
-- UUID v7 generados en backend para IDs transaccionales, utiles para orden temporal y menor friccion en inserciones distribuidas.
-- Bloqueos pesimistas y `SKIP LOCKED` en asignacion de repartidores para reducir colisiones cuando varios pedidos se asignan al mismo tiempo.
-- PostGIS e indices geoespaciales para busqueda por distancia.
-- HikariCP configurable por variables de entorno.
-- Separacion por capas para mantener reglas de negocio transaccionales en servicios.
-
-Pendiente recomendado para completar este punto:
-
-- implementar un `OrderBuilder` o fabrica de pedidos para construir ordenes complejas sin constructores largos ni setters dispersos;
-- encapsular calculos de subtotal, envio, descuentos, impuestos y propina en servicios de dominio;
-- agregar eventos/asynchrony para tracking y notificaciones de hora pico;
-- agregar pruebas de concurrencia y carga sobre creacion/asignacion de pedidos.
-
-## Configuracion Local
-
-1. Crear un archivo `.env` basado en `.env.example`.
-2. Completar `DB_PASSWORD`.
-3. Verificar que la base PostgreSQL tenga PostGIS habilitado.
-4. Ejecutar la aplicacion.
-
-Variables principales:
-
-```properties
-DB_URL=jdbc:postgresql://host:5432/postgres?sslmode=require
-DB_USER=postgres
-DB_PASSWORD=
-DB_POOL_MAX_SIZE=10
-DB_POOL_MIN_IDLE=2
-DEV_DELIVERY_USER_ID=018f0000-0000-7000-8000-000000000003
-```
-
-## Ejecucion
-
-```bash
-./mvnw spring-boot:run
-```
-
-La aplicacion queda disponible por defecto en:
-
-```text
-http://localhost:8080
-```
-
-Documentacion OpenAPI:
-
-```text
-http://localhost:8080/swagger-ui/index.html
-http://localhost:8080/v3/api-docs
-```
+Swagger muestra el contrato completo y siempre debe revisarse antes de integrar
+frontend o pruebas de carga.
 
 ## Pruebas
 
-```bash
-./mvnw test
-```
-
-Resultado documentado:
-
-```text
-docs/testing/delivery-endpoints-test-results.md
-```
-
-La suite cubre:
-
-- contrato HTTP del controller de delivery con MockMvc;
-- validaciones de request;
-- reglas de negocio del service;
-- generador UUID v7;
-- smoke test de la aplicacion.
-
-## Pruebas Manuales con Datos Seed
-
-Despues de levantar la aplicacion y cargar `delivery_test_data.sql`, se puede probar:
+### Ejecutar pruebas automatizadas
 
 ```bash
-curl -X POST http://localhost:8080/api/deliveries/assign \
-  -H "Content-Type: application/json" \
-  -d '{"orderId":"018f0000-0000-7000-8000-000000000401"}'
+./mvnw clean test
 ```
 
-Para simular otro repartidor en desarrollo:
+### Probar el backend levantado
 
 ```bash
-curl http://localhost:8080/api/deliveries/my-orders \
-  -H "X-Dev-User-Id: 018f0000-0000-7000-8000-000000000003"
+curl http://localhost:8080/swagger-ui/index.html
+curl http://localhost:8080/v3/api-docs
 ```
+
+### Prueba de carga
+
+Se realizo una prueba con `k6` de `10,000 pedidos/minuto` en la instancia
+EC2 mejorada, usando el flujo real de carrito + orden.
+
+Resultado resumido:
+
+- `10,018` pedidos exitosos;
+- `100%` de solicitudes de orden exitosas;
+- `p95` de creacion de orden por debajo de `1s`;
+- el entorno quedo limpio despues de la corrida.
 
 ## Despliegue
 
-La configuracion esta preparada para usar variables de entorno en nube:
+### EC2
 
-- `DB_URL`
-- `DB_USER`
-- `DB_PASSWORD`
-- variables opcionales de pool HikariCP
-- `FLYWAY_BASELINE_ON_MIGRATE` si se conecta contra una base existente
+Guia recomendada:
 
-Pendiente de entrega:
+- clonar backend y frontend en la misma instancia;
+- configurar `.env`;
+- levantar con `docker compose -f docker-compose.aws.yml --env-file .env up -d --build`;
+- exponer solo `80` y `443` al publico;
+- mantener PostgreSQL interno al host Docker.
 
-- URL publica del backend desplegado.
-- URL del frontend desplegado.
-- Video guia del despliegue.
-- Reporte de aportes individuales.
+### SSL / sslip.io
 
-## Pendientes del Proyecto
+Se usa `sslip.io` para asociar la IP publica a un nombre de dominio utilizable
+por Let's Encrypt sin comprar un dominio propio.
 
-- Implementar autenticacion real con JWT o sesiones y reglas por rol.
-- Completar endpoints de restaurantes, productos, carritos, pedidos, pagos, reclamos, reviews y administracion.
-- Integrar Stripe o mantener un flujo de pago simulado.
-- Agregar notificaciones para hora pico y seguimiento en tiempo real.
-- Agregar endpoints de reportes, incluyendo restaurantes mas pedidos.
-- Publicar documentacion final de API y despliegue.
+## Documentacion Relacionada
+
+- [`PROJECT_TECHNICAL_EXPLANATION_GUIDE.md`](/home/armandoaguilar/Desktop/delevery_backend/PROJECT_TECHNICAL_EXPLANATION_GUIDE.md)
+- [`DEPLOYMENT_SETUP_GUIDE.md`](/home/armandoaguilar/Desktop/delevery_backend/DEPLOYMENT_SETUP_GUIDE.md)
+- [`DATABASE_ER_DIAGRAM.puml`](/home/armandoaguilar/Desktop/delevery_backend/DATABASE_ER_DIAGRAM.puml)
+
+## Notas Finales
+
+- La aplicacion esta pensada para evolucionar sin romper el contrato HTTP.
+- Los totales y montos siempre se recalculan en backend.
+- Las reglas de negocio dependen de estados, propiedad y validaciones de
+  seguridad.
+- Los datos de prueba, seeds y scripts de carga deben limpiarse despues de
+  cada validacion.
